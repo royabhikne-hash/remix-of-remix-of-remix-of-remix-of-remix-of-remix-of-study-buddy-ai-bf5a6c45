@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SoundWave from "@/components/SoundWave";
+import VoiceInputIndicator from "@/components/VoiceInputIndicator";
+import Confetti from "@/components/Confetti";
 
 // Web Speech API types
 interface SpeechRecognitionEvent extends Event {
@@ -118,6 +120,8 @@ const StudyChat = ({ onEndStudy, studentId }: StudyChatProps) => {
   const [quizLoading, setQuizLoading] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [hasPlayedWelcome, setHasPlayedWelcome] = useState(false);
   
   // Real-time analysis state
   const [analysis, setAnalysis] = useState<RealTimeAnalysis>({
@@ -137,6 +141,17 @@ const StudyChat = ({ onEndStudy, studentId }: StudyChatProps) => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-speak welcome greeting when chatbot first opens
+  useEffect(() => {
+    if (!hasPlayedWelcome && autoSpeak && messages.length === 1) {
+      const timer = setTimeout(() => {
+        speakText(messages[0].content, messages[0].id);
+        setHasPlayedWelcome(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [hasPlayedWelcome, autoSpeak]);
 
   // Load voices when available
   useEffect(() => {
@@ -612,6 +627,11 @@ const StudyChat = ({ onEndStudy, studentId }: StudyChatProps) => {
     else if (accuracy >= 40) understanding = "partial";
     else understanding = "weak";
 
+    // Trigger confetti for strong and partial understanding
+    if (accuracy >= 40) {
+      setShowConfetti(true);
+    }
+
     setShowResult(true);
 
     const resultMessage: ChatMessage = {
@@ -675,6 +695,8 @@ const StudyChat = ({ onEndStudy, studentId }: StudyChatProps) => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-60px)] bg-background">
+      {/* Confetti Celebration */}
+      <Confetti trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
       {/* Minimal ChatGPT-style Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="flex items-center gap-3">
@@ -1091,9 +1113,12 @@ const StudyChat = ({ onEndStudy, studentId }: StudyChatProps) => {
               </Button>
             </div>
             {isListening && (
-              <p className="text-xs text-center text-muted-foreground mt-2 animate-pulse">
-                🎤 Bol dijiye... main sun raha hoon
-              </p>
+              <div className="flex flex-col items-center gap-2 mt-3">
+                <VoiceInputIndicator isActive={isListening} />
+                <p className="text-xs text-muted-foreground animate-pulse">
+                  Bol dijiye... main sun raha hoon
+                </p>
+              </div>
             )}
           </div>
         </div>

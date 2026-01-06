@@ -225,4 +225,90 @@
       opacity: 1;
     }
   }
+
+  /* Sound Wave Component */
+  .sound-wave {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 16px;
+  }
+
+  .sound-wave .bar {
+    width: 3px;
+    background: hsl(var(--primary));
+    border-radius: 2px;
+    animation: sound-wave-animation 0.5s ease-in-out infinite;
+  }
+
+  .sound-wave .bar:nth-child(1) { animation-delay: 0s; height: 40%; }
+  .sound-wave .bar:nth-child(2) { animation-delay: 0.1s; height: 70%; }
+  .sound-wave .bar:nth-child(3) { animation-delay: 0.2s; height: 100%; }
+  .sound-wave .bar:nth-child(4) { animation-delay: 0.3s; height: 60%; }
+  .sound-wave .bar:nth-child(5) { animation-delay: 0.4s; height: 30%; }
+
+  @keyframes sound-wave-animation {
+    0%, 100% { transform: scaleY(0.5); }
+    50% { transform: scaleY(1); }
+  }
+
+  /* Voice Input Indicator Animation */
+  .voice-input-container {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .voice-dot {
+    width: 12px;
+    height: 12px;
+    background: hsl(var(--destructive));
+    border-radius: 50%;
+    animation: voice-dot-pulse 1s ease-in-out infinite;
+  }
+
+  .voice-ring {
+    position: absolute;
+    border: 2px solid hsl(var(--destructive));
+    border-radius: 50%;
+    opacity: 0;
+    animation: voice-ring-expand 1.5s ease-out infinite;
+  }
+
+  .voice-ring-1 {
+    width: 20px;
+    height: 20px;
+    animation-delay: 0s;
+  }
+
+  .voice-ring-2 {
+    width: 20px;
+    height: 20px;
+    animation-delay: 0.5s;
+  }
+
+  .voice-ring-3 {
+    width: 20px;
+    height: 20px;
+    animation-delay: 1s;
+  }
+
+  @keyframes voice-dot-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+  }
+
+  @keyframes voice-ring-expand {
+    0% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(2.5);
+      opacity: 0;
+    }
+  }
 }
