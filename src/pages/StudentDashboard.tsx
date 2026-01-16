@@ -23,9 +23,11 @@ import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudyChat from "@/components/StudyChat";
 import ChatHistory from "@/components/ChatHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import LanguageToggle from "@/components/LanguageToggle";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ChatMessage {
   id: string;
@@ -54,6 +56,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, signOut, loading } = useAuth();
+  const { t, language } = useLanguage();
   const [isStudying, setIsStudying] = useState(false);
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [userName, setUserName] = useState("Student");
@@ -504,11 +507,12 @@ const StudentDashboard = () => {
                 <BookOpen className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <span className="font-bold text-lg">EduImprove AI</span>
-                <p className="text-xs text-muted-foreground">Student Dashboard</p>
+                <span className="font-bold text-lg">{t('app.name')}</span>
+                <p className="text-xs text-muted-foreground">{t('nav.dashboard')}</p>
               </div>
             </div>
               <div className="flex items-center gap-3">
+                <LanguageToggle />
                 <ThemeToggle />
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
@@ -530,25 +534,25 @@ const StudentDashboard = () => {
         <div className="mb-8">
           <div className="edu-card p-6 md:p-8 text-center bg-gradient-to-br from-primary/10 to-accent/10">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
-              Namaste, {userName}! 👋
+              {language === 'en' ? `Hello, ${userName}!` : `Namaste, ${userName}!`} 👋
             </h1>
             <p className="text-muted-foreground mb-6">
               {todayStats.studied
-                ? "Great job studying today! Ready for more?"
-                : "Aaj kya padhna hai? Chal start karte hain!"}
+                ? (language === 'en' ? "Great job studying today! Ready for more?" : "Aaj padhai achi ki! Aur karna hai?")
+                : (language === 'en' ? "What do you want to study today? Let's start!" : "Aaj kya padhna hai? Chal start karte hain!")}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Button variant="hero" size="xl" onClick={handleStartStudy}>
                 <Play className="w-5 h-5" />
-                Start Studying
+                {language === 'en' ? 'Start Studying' : 'Padhai Shuru Karo'}
               </Button>
               <Button variant="outline" size="lg" onClick={() => setShowChatHistory(true)}>
                 <History className="w-4 h-4 mr-2" />
-                Chat History
+                {language === 'en' ? 'Chat History' : 'Chat History'}
               </Button>
               <Button variant="outline" size="lg" onClick={() => navigate("/progress")}>
                 <BarChart3 className="w-4 h-4 mr-2" />
-                View Progress
+                {t('nav.progress')}
               </Button>
               <Button 
                 variant="secondary" 
@@ -557,7 +561,7 @@ const StudentDashboard = () => {
                 disabled={sendingReport}
               >
                 {sendingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-2" />}
-                Send Report
+                {t('action.sendReport')}
               </Button>
             </div>
           </div>
