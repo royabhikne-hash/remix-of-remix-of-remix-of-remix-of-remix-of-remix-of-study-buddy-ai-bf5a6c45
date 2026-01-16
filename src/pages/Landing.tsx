@@ -2,9 +2,12 @@ import { BookOpen, Users, GraduationCap, MessageCircle, TrendingUp, FileText } f
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import LanguageToggle from "@/components/LanguageToggle";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
 
   return (
     <div className="min-h-screen hero-gradient">
@@ -15,15 +18,16 @@ const Landing = () => {
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
               <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
             </div>
-            <span className="text-base sm:text-xl font-bold text-foreground truncate">EduImprove AI</span>
+            <span className="text-base sm:text-xl font-bold text-foreground truncate">{t('app.name')}</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            <LanguageToggle />
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")} className="text-xs sm:text-sm px-2 sm:px-4">
-              Login
+              {t('nav.login')}
             </Button>
             <Button variant="hero" size="sm" onClick={() => navigate("/signup")} className="text-xs sm:text-sm px-3 sm:px-4">
-              Get Started
+              {t('landing.getStarted')}
             </Button>
           </div>
         </div>
@@ -34,27 +38,33 @@ const Landing = () => {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-secondary px-4 py-2 rounded-full mb-6">
             <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
-            <span className="text-sm font-semibold text-secondary-foreground">AI Study Companion</span>
+            <span className="text-sm font-semibold text-secondary-foreground">
+              {language === 'en' ? 'AI Study Companion' : 'AI स्टडी पार्टनर'}
+            </span>
           </div>
           
           <h1 className="text-4xl md:text-6xl font-extrabold text-foreground mb-6 leading-tight">
-            Your Personal<br />
-            <span className="gradient-text">Study Buddy</span> is Here
+            {language === 'en' ? (
+              <>Your Personal<br /><span className="gradient-text">Study Buddy</span> is Here</>
+            ) : (
+              <>तेरा Personal<br /><span className="gradient-text">Study Buddy</span> आ गया</>
+            )}
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Bhai, padhai mein help chahiye? AI companion jo tere saath padhega, 
-            samjhaayega, aur progress track karega. Real improvement, real results.
+            {language === 'en' 
+              ? "Need help with studies? AI companion that studies with you, explains concepts, and tracks your progress. Real improvement, real results."
+              : "Bhai, padhai mein help chahiye? AI companion jo tere saath padhega, samjhaayega, aur progress track karega. Real improvement, real results."}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="xl" onClick={() => navigate("/signup")}>
               <GraduationCap className="w-5 h-5" />
-              Start Studying Now
+              {language === 'en' ? 'Start Studying Now' : 'Padhai Shuru Karo'}
             </Button>
             <Button variant="hero-outline" size="xl" onClick={() => navigate("/school-login")}>
               <Users className="w-5 h-5" />
-              School Login
+              {t('auth.schoolLogin')}
             </Button>
           </div>
         </div>
@@ -65,18 +75,24 @@ const Landing = () => {
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           <FeatureCard
             icon={<MessageCircle className="w-6 h-6" />}
-            title="AI Study Chat"
-            description="Chat with AI in Hinglish while studying. Upload notes, ask doubts, get explanations."
+            title={language === 'en' ? "AI Study Chat" : "AI Study Chat"}
+            description={language === 'en' 
+              ? "Chat with AI while studying. Upload notes, ask doubts, get explanations."
+              : "Padhai karte waqt AI se chat karo. Notes upload karo, doubts poocho, samjho."}
           />
           <FeatureCard
             icon={<TrendingUp className="w-6 h-6" />}
-            title="Track Progress"
-            description="AI tracks your understanding, weak areas, and improvement over time."
+            title={language === 'en' ? "Track Progress" : "Progress Dekho"}
+            description={language === 'en'
+              ? "AI tracks your understanding, weak areas, and improvement over time."
+              : "AI tumhari understanding, weak areas, aur improvement track karta hai."}
           />
           <FeatureCard
             icon={<FileText className="w-6 h-6" />}
-            title="Parent Reports"
-            description="Weekly PDF reports sent automatically to parents via WhatsApp."
+            title={language === 'en' ? "Parent Reports" : "Parent Reports"}
+            description={language === 'en'
+              ? "Weekly PDF reports sent automatically to parents via WhatsApp."
+              : "Weekly PDF reports automatically parents ko WhatsApp pe bheje jaate hain."}
           />
         </div>
       </section>
