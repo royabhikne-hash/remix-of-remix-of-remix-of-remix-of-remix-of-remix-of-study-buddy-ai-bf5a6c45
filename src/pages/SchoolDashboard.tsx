@@ -1035,7 +1035,7 @@ const SchoolDashboard = () => {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <p className="text-xs sm:text-sm text-muted-foreground">
-                {t("school.rejectStudentDesc").replaceAll("{name}", rejectingStudent?.name ?? "")}
+                {t("school.rejectStudentDesc").split("{name}").join(rejectingStudent?.name ?? "")}
               </p>
             <Textarea
               placeholder={t("school.rejectReasonPlaceholder")}
@@ -1071,12 +1071,12 @@ const SchoolDashboard = () => {
         <DialogContent className="max-w-sm sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg">
-              {t("school.rejectStudentsTitle").replaceAll("{count}", String(selectedPendingIds.size))}
+              {t("school.rejectStudentsTitle").split("{count}").join(String(selectedPendingIds.size))}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-xs sm:text-sm text-muted-foreground">
-              {t("school.rejectStudentsDesc").replaceAll("{count}", String(selectedPendingIds.size))}
+              {t("school.rejectStudentsDesc").split("{count}").join(String(selectedPendingIds.size))}
             </p>
             <Textarea
               placeholder={t("school.rejectReasonPlaceholder")}
@@ -1116,8 +1116,7 @@ const SchoolDashboard = () => {
               {t("school.removeStudentTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs sm:text-sm">
-              {t("school.removeStudentDesc")
-                .replaceAll("{name}", deleteDialog.student?.name ?? "")}
+              {t("school.removeStudentDesc").split("{name}").join(deleteDialog.student?.name ?? "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
