@@ -166,6 +166,15 @@ serve(async (req) => {
 
     console.log("Starting report generation...", body.previewOnly ? "(Preview)" : body.sendWhatsApp ? "(Send)" : "");
 
+    // Validate studentId if provided (must be valid UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (body.studentId && !uuidRegex.test(body.studentId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid studentId format. Must be a valid UUID." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     
     let studentsQuery = supabase.from("students").select("*, schools(name, district, state)");
