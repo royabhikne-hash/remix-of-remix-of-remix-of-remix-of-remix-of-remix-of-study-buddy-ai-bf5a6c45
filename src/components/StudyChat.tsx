@@ -148,8 +148,11 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     voices: availableVoices,
     usageInfo: ttsUsageInfo,
     getStatusMessage: getTTSStatusMessage,
+    getEngineBadge,
     isPremiumActive,
     isAndroidNative,
+    activeEngine,
+    error: ttsError,
   } = useSmartTTS(studentId || null);
   
   // Quiz mode state
@@ -331,47 +334,50 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     });
   };
 
-  // Robust TTS function with error handling
+  // Robust TTS function with error handling & no silent failure
   const speakText = useCallback(async (text: string, messageId: string, isQuizQuestion: boolean = false) => {
-    // Check TTS support
     if (!ttsSupported) {
-      console.log('TTS not supported on this device');
+      toast({ title: "Voice Not Available", description: "Is device pe voice support nahi hai.", variant: "destructive", duration: 2000 });
       return;
     }
 
-    // If already speaking this message, stop it
     if (speakingMessageId === messageId) {
       stopTTS();
       setSpeakingMessageId(null);
       return;
     }
 
-    // Stop any ongoing speech first
     stopTTS();
-    
     setSpeakingMessageId(messageId);
-    
+
     try {
       await speechifySpeak({
         text,
         speed: isQuizQuestion ? Math.max(voiceSpeed - 0.1, 0.7) : voiceSpeed,
         language: 'hi-IN',
       });
-    } catch (error) {
-      console.error("TTS error:", error);
-      // Show toast only if it's a user-initiated action (not auto-speak)
-      if (!autoSpeak) {
+
+      // Check if there was an error after speak completed (no silent failure)
+      if (ttsError) {
         toast({
           title: "Voice Error",
-          description: "Voice playback mein problem hui. Try again!",
+          description: ttsError,
           variant: "destructive",
-          duration: 2000
+          duration: 3000
         });
       }
+    } catch (error) {
+      console.error("TTS error:", error);
+      toast({
+        title: "Voice Error",
+        description: "Voice playback mein problem hui. Try again!",
+        variant: "destructive",
+        duration: 2000
+      });
     } finally {
       setSpeakingMessageId(null);
     }
-  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, autoSpeak, toast]);
+  }, [ttsSupported, speakingMessageId, voiceSpeed, speechifySpeak, stopTTS, toast, ttsError]);
 
   // Quiz TTS removed - no voice in quiz mode
 
@@ -1080,16 +1086,22 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                           <>
                             <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                             <SoundWave isActive={true} className="ml-0.5 sm:ml-1" />
-                            {/* TTS Type Indicator - shows Premium or Web */}
-                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold ${
-                              isPremiumActive 
-                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' 
-                                : isAndroidNative
-                                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                                  : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {isPremiumActive ? '✨ Pro' : isAndroidNative ? '📱 Native' : 'Web'}
-                            </span>
+                            {/* TTS Engine Badge - Premium / Web Voice / Device Voice */}
+                            {(() => {
+                              const badge = getEngineBadge();
+                              if (badge.style === 'none') return null;
+                              return (
+                                <span className={`ml-1 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold ${
+                                  badge.style === 'premium'
+                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                                    : badge.style === 'native'
+                                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                                      : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  {badge.label}
+                                </span>
+                              );
+                            })()}
                           </>
                         ) : (
                           <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground hover:text-foreground" />
