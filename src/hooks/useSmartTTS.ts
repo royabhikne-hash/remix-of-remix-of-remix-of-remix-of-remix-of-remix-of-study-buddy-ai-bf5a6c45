@@ -3,11 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNativeTTS, type ActiveEngine } from './useNativeTTS';
 
 /**
- * Unified TTS Hook - Simple 2-tier system
+ * Unified TTS Hook - Simple 2-tier system with generation tracking
  * 
  * Pro Plan + chars remaining → Premium Speechify TTS
  * If premium fails or quota exhausted → Web Speech API (free, no limit)
  * Basic Plan → Web Speech API directly (no limit)
+ * 
+ * CRITICAL FIX: Uses a generation counter to prevent old audio event handlers
+ * from interfering with new speak calls (prevents web TTS fallback bug).
  */
 
 export interface SmartTTSOptions {
@@ -67,17 +70,20 @@ export const useSmartTTS = (studentId: string | null) => {
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Ref to always have latest usageInfo in async speak() - prevents stale closure
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // Generation counter - increments on every new speak() call
+  // Old audio handlers check this to avoid updating state for stale calls
+  const generationRef = useRef(0);
+  // Refs to avoid stale closures
   const usageInfoRef = useRef<TTSUsageInfo | null>(null);
   const voiceIdRef = useRef('henry');
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Keep refs in sync with state
-  useEffect(() => { usageInfoRef.current = state.usageInfo; }, [state.usageInfo]);
-  useEffect(() => { voiceIdRef.current = state.currentVoiceId; }, [state.currentVoiceId]);
 
   // Web Speech TTS (fallback / basic plan)
   const nativeTTS = useNativeTTS();
+
+  // Keep refs in sync
+  useEffect(() => { usageInfoRef.current = state.usageInfo; }, [state.usageInfo]);
+  useEffect(() => { voiceIdRef.current = state.currentVoiceId; }, [state.currentVoiceId]);
 
   // Fetch subscription status
   const fetchUsageInfo = useCallback(async () => {
@@ -114,9 +120,15 @@ export const useSmartTTS = (studentId: string | null) => {
 
   const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current.load();
+      // Remove all event listeners BEFORE stopping to prevent stale handlers
+      const audio = audioRef.current;
+      audio.onplay = null;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.onpause = null;
+      audio.pause();
+      audio.src = '';
+      audio.load();
       audioRef.current = null;
     }
     if (abortControllerRef.current) {
@@ -126,6 +138,8 @@ export const useSmartTTS = (studentId: string | null) => {
   }, []);
 
   const stop = useCallback(() => {
+    // Increment generation so any in-flight async operations know they're stale
+    generationRef.current++;
     cleanupAudio();
     nativeTTS.stop();
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -135,13 +149,8 @@ export const useSmartTTS = (studentId: string | null) => {
   }, [cleanupAudio, nativeTTS]);
 
   // Speak using Premium TTS (Speechify)
-  const speakPremium = useCallback(async (options: SmartTTSOptions): Promise<boolean> => {
+  const speakPremium = useCallback(async (options: SmartTTSOptions, generation: number): Promise<boolean> => {
     const { text, voiceId = voiceIdRef.current, speed = 1.0 } = options;
-
-    nativeTTS.stop();
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
 
     const cacheKey = `${voiceId}:${text.substring(0, 200)}`;
     const cachedAudio = clientAudioCache.get(cacheKey);
@@ -151,6 +160,12 @@ export const useSmartTTS = (studentId: string | null) => {
 
     try {
       let audioDataUrl: string;
+
+      // Check if this generation is still current
+      if (generationRef.current !== generation) {
+        console.log('TTS: Premium call cancelled (new generation)');
+        return false;
+      }
 
       const validCachedAudio = clientAudioCache.get(cacheKey);
       if (validCachedAudio) {
@@ -163,6 +178,12 @@ export const useSmartTTS = (studentId: string | null) => {
         const { data, error } = await supabase.functions.invoke('text-to-speech', {
           body: { text, voiceId, speed, language: 'hi-IN', studentId },
         });
+
+        // Check generation again after async call
+        if (generationRef.current !== generation) {
+          console.log('TTS: Premium response discarded (new generation)');
+          return false;
+        }
 
         if (error) throw new Error(error.message || 'TTS request failed');
 
@@ -202,9 +223,10 @@ export const useSmartTTS = (studentId: string | null) => {
         console.log(`TTS Premium: ${data.audioSize || 'unknown'} bytes, cached: ${data.cached}`);
       }
 
-      nativeTTS.stop();
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+      // Final generation check before playing
+      if (generationRef.current !== generation) {
+        console.log('TTS: Playback cancelled (new generation)');
+        return false;
       }
 
       const audio = new Audio(audioDataUrl);
@@ -212,15 +234,19 @@ export const useSmartTTS = (studentId: string | null) => {
       audio.playbackRate = Math.max(0.5, Math.min(2.0, speed));
 
       return new Promise((resolve) => {
+        // Guard all handlers with generation check
         audio.onplay = () => {
+          if (generationRef.current !== generation) return;
           setState(prev => ({ ...prev, isSpeaking: true, isLoading: false, activeEngine: 'premium' }));
         };
         audio.onended = () => {
+          if (generationRef.current !== generation) return;
           setState(prev => ({ ...prev, isSpeaking: false, activeEngine: 'none' }));
           cleanupAudio();
           resolve(true);
         };
         audio.onerror = () => {
+          if (generationRef.current !== generation) { resolve(false); return; }
           setState(prev => ({ ...prev, isSpeaking: false, isLoading: false, activeEngine: 'none' }));
           cleanupAudio();
           resolve(false);
@@ -231,11 +257,14 @@ export const useSmartTTS = (studentId: string | null) => {
       console.error('Premium TTS Error:', error);
       return false;
     }
-  }, [studentId, cleanupAudio, nativeTTS]);
+  }, [studentId, cleanupAudio]);
 
   // Speak using Web Speech API (no limit)
-  const speakWeb = useCallback(async (options: SmartTTSOptions): Promise<boolean> => {
+  const speakWeb = useCallback(async (options: SmartTTSOptions, generation: number): Promise<boolean> => {
     const { text, speed = 0.9 } = options;
+
+    // Check generation before starting
+    if (generationRef.current !== generation) return false;
 
     console.log('TTS: Using Web Speech API');
     cleanupAudio();
@@ -249,6 +278,9 @@ export const useSmartTTS = (studentId: string | null) => {
         pitch: 1.0,
         volume: 1.0,
       });
+
+      // Only update state if this generation is still current
+      if (generationRef.current !== generation) return false;
 
       setState(prev => ({
         ...prev,
@@ -267,31 +299,47 @@ export const useSmartTTS = (studentId: string | null) => {
     const { text } = options;
     if (!text || text.trim().length === 0) return;
 
+    // Stop current playback and increment generation
     stop();
+    const currentGeneration = generationRef.current;
+
     setState(prev => ({ ...prev, isLoading: true, error: null, activeEngine: 'none' }));
 
     const textLength = text.length;
-    // Use ref to get latest usageInfo (avoids stale closure when typing during playback)
+    // Use ref to get latest usageInfo (avoids stale closure)
     const usageInfo = usageInfoRef.current;
 
     // Pro plan with remaining chars → try Premium first
     let tryPremium = false;
     if (studentId && usageInfo?.plan === 'pro' && usageInfo.canUsePremium && usageInfo.ttsRemaining >= textLength) {
       tryPremium = true;
-      console.log(`TTS: Trying Premium (${usageInfo.ttsRemaining} chars remaining)`);
+      console.log(`TTS: Trying Premium (${usageInfo.ttsRemaining} chars remaining) [gen=${currentGeneration}]`);
     }
 
     let success = false;
 
     // STEP 1: Try Premium if eligible
     if (tryPremium) {
-      success = await speakPremium(options);
+      success = await speakPremium(options, currentGeneration);
+      // Check if a newer generation started while we were waiting
+      if (generationRef.current !== currentGeneration) {
+        console.log(`TTS: Generation changed during premium (${currentGeneration} → ${generationRef.current}), aborting`);
+        return;
+      }
       if (success) return;
       console.log('TTS: Premium failed, falling back to Web Speech...');
     }
 
+    // Check generation again before fallback
+    if (generationRef.current !== currentGeneration) {
+      console.log(`TTS: Generation changed, skipping web fallback`);
+      return;
+    }
+
     // STEP 2: Web Speech API (no limit)
-    success = await speakWeb(options);
+    success = await speakWeb(options, currentGeneration);
+
+    if (generationRef.current !== currentGeneration) return;
 
     if (!success) {
       const errorMsg = 'Voice playback failed. Try again!';
