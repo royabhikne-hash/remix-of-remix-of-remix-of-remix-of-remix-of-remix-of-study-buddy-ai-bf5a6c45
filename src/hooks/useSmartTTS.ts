@@ -67,7 +67,14 @@ export const useSmartTTS = (studentId: string | null) => {
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Ref to always have latest usageInfo in async speak() - prevents stale closure
+  const usageInfoRef = useRef<TTSUsageInfo | null>(null);
+  const voiceIdRef = useRef('henry');
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Keep refs in sync with state
+  useEffect(() => { usageInfoRef.current = state.usageInfo; }, [state.usageInfo]);
+  useEffect(() => { voiceIdRef.current = state.currentVoiceId; }, [state.currentVoiceId]);
 
   // Web Speech TTS (fallback / basic plan)
   const nativeTTS = useNativeTTS();
@@ -129,7 +136,7 @@ export const useSmartTTS = (studentId: string | null) => {
 
   // Speak using Premium TTS (Speechify)
   const speakPremium = useCallback(async (options: SmartTTSOptions): Promise<boolean> => {
-    const { text, voiceId = state.currentVoiceId, speed = 1.0 } = options;
+    const { text, voiceId = voiceIdRef.current, speed = 1.0 } = options;
 
     nativeTTS.stop();
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -224,7 +231,7 @@ export const useSmartTTS = (studentId: string | null) => {
       console.error('Premium TTS Error:', error);
       return false;
     }
-  }, [state.currentVoiceId, studentId, cleanupAudio, nativeTTS]);
+  }, [studentId, cleanupAudio, nativeTTS]);
 
   // Speak using Web Speech API (no limit)
   const speakWeb = useCallback(async (options: SmartTTSOptions): Promise<boolean> => {
@@ -264,7 +271,8 @@ export const useSmartTTS = (studentId: string | null) => {
     setState(prev => ({ ...prev, isLoading: true, error: null, activeEngine: 'none' }));
 
     const textLength = text.length;
-    const usageInfo = state.usageInfo;
+    // Use ref to get latest usageInfo (avoids stale closure when typing during playback)
+    const usageInfo = usageInfoRef.current;
 
     // Pro plan with remaining chars → try Premium first
     let tryPremium = false;
@@ -296,7 +304,7 @@ export const useSmartTTS = (studentId: string | null) => {
         activeEngine: 'none',
       }));
     }
-  }, [state.usageInfo, studentId, stop, speakPremium, speakWeb]);
+  }, [studentId, stop, speakPremium, speakWeb]);
 
   const setVoice = useCallback((voiceId: string) => {
     setState(prev => ({ ...prev, currentVoiceId: voiceId }));
