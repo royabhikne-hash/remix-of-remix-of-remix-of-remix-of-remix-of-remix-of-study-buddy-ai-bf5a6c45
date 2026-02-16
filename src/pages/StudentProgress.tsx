@@ -348,7 +348,7 @@ const StudentProgress = () => {
       weeks.push({
         week: `Week ${4 - i}`,
         sessions: weekSessions.length,
-        time: Math.round(weekSessions.reduce((acc, s) => acc + (s.time_spent || 0), 0) / 60),
+        time: weekSessions.reduce((acc, s) => acc + (s.time_spent || 0), 0),
         score: weekSessions.length > 0
           ? Math.round(weekSessions.reduce((acc, s) => acc + (s.improvement_score || 50), 0) / weekSessions.length)
           : 0,

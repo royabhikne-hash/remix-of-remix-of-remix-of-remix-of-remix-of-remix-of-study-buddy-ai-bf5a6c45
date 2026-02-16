@@ -61,7 +61,7 @@ export const SubjectBreakdownCard = ({ subjects }: SubjectBreakdownCardProps) =>
                 <div>
                   <h4 className="font-semibold">{subject.name}</h4>
                   <p className="text-xs text-muted-foreground">
-                    {subject.sessions} {t.sessions.toLowerCase()} • {Math.round(subject.totalTime / 60)} {t.minutes}
+                    {subject.sessions} {t.sessions.toLowerCase()} • {subject.totalTime} {t.minutes}
                   </p>
                 </div>
               </div>
