@@ -269,7 +269,7 @@ export const useSmartTTS = (studentId: string | null) => {
     console.log('TTS: Using Web Speech API');
     cleanupAudio();
 
-    setState(prev => ({ ...prev, isSpeaking: true, isLoading: false }));
+    setState(prev => ({ ...prev, isSpeaking: true, isLoading: false, activeEngine: 'web' }));
 
     try {
       const result = await nativeTTS.speak({
@@ -282,14 +282,16 @@ export const useSmartTTS = (studentId: string | null) => {
       // Only update state if this generation is still current
       if (generationRef.current !== generation) return false;
 
-      setState(prev => ({
-        ...prev,
-        activeEngine: result.engine === 'web' ? 'web' : 'none',
-      }));
+      if (!result.success) {
+        setState(prev => ({ ...prev, activeEngine: 'none' }));
+      }
 
       return result.success;
     } catch (error) {
       console.error('TTS Web Error:', error);
+      if (generationRef.current === generation) {
+        setState(prev => ({ ...prev, activeEngine: 'none' }));
+      }
       return false;
     }
   }, [nativeTTS, cleanupAudio]);
@@ -382,20 +384,16 @@ export const useSmartTTS = (studentId: string | null) => {
     }
   }, [state.activeEngine]);
 
-  // Sync with web TTS speaking state
+  // Sync ONLY isSpeaking from web TTS — never override activeEngine here
+  // The activeEngine is managed exclusively within speak/speakPremium/speakWeb via generation tracking
   useEffect(() => {
     if (nativeTTS.isSpeaking) {
       setState(prev => ({ ...prev, isSpeaking: true }));
     } else if (!audioRef.current) {
+      // Only set isSpeaking false if no premium audio is playing either
       setState(prev => ({ ...prev, isSpeaking: false }));
     }
   }, [nativeTTS.isSpeaking]);
-
-  useEffect(() => {
-    if (nativeTTS.activeEngine === 'web' && state.activeEngine !== 'premium') {
-      setState(prev => ({ ...prev, activeEngine: 'web' }));
-    }
-  }, [nativeTTS.activeEngine, state.activeEngine]);
 
   return {
     speak,
