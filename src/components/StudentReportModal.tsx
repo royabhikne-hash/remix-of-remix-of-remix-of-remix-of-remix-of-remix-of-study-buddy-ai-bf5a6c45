@@ -564,7 +564,7 @@ const StudentReportModal = ({
     } else if (weeklyStats.totalTimeSpent < 120) {
       recommendations.push("Study time theek hai, par aur badha sakte ho! Roz 45-60 min ka target rakho - toppers yahi karte hain!");
     } else {
-      recommendations.push("Study time excellent hai ji! " + Math.round(weeklyStats.totalTimeSpent / 60) + " min padhai - aap serious student ho!");
+      recommendations.push("Study time excellent hai ji! " + weeklyStats.totalTimeSpent + " min padhai - aap serious student ho!");
     }
     
     // Best study time
@@ -610,7 +610,7 @@ const StudentReportModal = ({
     score += Math.min(30, sessions.length * 5);
     
     // Time contribution (max 25)
-    score += Math.min(25, Math.round(weeklyStats.totalTimeSpent / 60) * 2);
+    score += Math.min(25, Math.round(weeklyStats.totalTimeSpent) * 2);
     
     // Quiz contribution (max 20)
     score += Math.min(20, weeklyStats.totalQuizzes * 5);
@@ -644,7 +644,7 @@ const StudentReportModal = ({
         : 0;
       const totalTime = daySessions.reduce((acc, s) => acc + (s.time_spent || 0), 0);
       
-      last7Days.push({ date: dateStr, score: avgScore, time: Math.round(totalTime / 60) });
+      last7Days.push({ date: dateStr, score: avgScore, time: totalTime });
     }
     return last7Days;
   };
@@ -689,7 +689,7 @@ const StudentReportModal = ({
   const getSkillRadarData = () => {
     const consistency = sessions.length > 0 ? Math.min(100, sessions.length * 15) : 0;
     const accuracy = weeklyStats.avgAccuracy;
-    const engagement = Math.min(100, (weeklyStats.totalTimeSpent / 60) * 2);
+    const engagement = Math.min(100, weeklyStats.totalTimeSpent * 2);
     const quizPerformance = quizzes.length > 0 
       ? Math.round(quizzes.reduce((acc, q) => acc + ((q.correct_count / q.total_questions) * 100), 0) / quizzes.length)
       : 0;
@@ -829,7 +829,7 @@ const StudentReportModal = ({
       const boxWidth = (contentWidth - 20) / 5;
       const allStats = [
         { label: "Sessions", value: weeklyStats.totalSessions.toString(), color: { r: 59, g: 130, b: 246 } },
-        { label: "Study Time", value: `${Math.round(weeklyStats.totalTimeSpent / 60)}m`, color: { r: 34, g: 197, b: 94 } },
+        { label: "Study Time", value: `${weeklyStats.totalTimeSpent}m`, color: { r: 34, g: 197, b: 94 } },
         { label: "Quizzes", value: weeklyStats.totalQuizzes.toString(), color: { r: 168, g: 85, b: 247 } },
         { label: "Accuracy", value: `${weeklyStats.avgAccuracy}%`, color: { r: 245, g: 158, b: 11 } },
         { label: "Avg Score", value: `${weeklyStats.avgImprovementScore}%`, color: { r: 239, g: 68, b: 68 } },
@@ -915,7 +915,7 @@ const StudentReportModal = ({
           pdf.text(`${day.sessions}`, x + dayBoxWidth / 2, yPos + 20, { align: "center" });
           pdf.setFontSize(5);
           pdf.setFont("helvetica", "normal");
-          pdf.text(`${Math.round(day.timeSpent / 60)}m`, x + dayBoxWidth / 2, yPos + 25, { align: "center" });
+          pdf.text(`${day.timeSpent}m`, x + dayBoxWidth / 2, yPos + 25, { align: "center" });
         } else {
           pdf.setTextColor(180, 180, 180);
           pdf.setFontSize(14);
@@ -969,7 +969,7 @@ const StudentReportModal = ({
         pdf.setFontSize(9);
         const comparisons = [
           { label: "Sessions", student: weeklyStats.totalSessions, classAvg: classAverages.avgSessions },
-          { label: "Study Time (min)", student: Math.round(weeklyStats.totalTimeSpent / 60), classAvg: Math.round(classAverages.avgTimeSpent / 60) },
+          { label: "Study Time (min)", student: weeklyStats.totalTimeSpent, classAvg: classAverages.avgTimeSpent },
           { label: "Accuracy", student: weeklyStats.avgAccuracy, classAvg: classAverages.avgAccuracy },
           { label: "Quizzes", student: weeklyStats.totalQuizzes, classAvg: classAverages.avgQuizzes },
         ];
@@ -1436,13 +1436,13 @@ const StudentReportModal = ({
                   </div>
                   <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-3 sm:p-5 text-center border border-accent/20 shadow-sm">
                     <p className="text-2xl sm:text-4xl font-bold text-accent mb-1">
-                      {Math.round(weeklyStats.totalTimeSpent / 60)}m
+                      {weeklyStats.totalTimeSpent}m
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground font-medium">Time</p>
                     {showComparison && classAverages && (
                       <div className="mt-2 text-xs">
                         <span className={`font-medium ${weeklyStats.totalTimeSpent >= classAverages.avgTimeSpent ? "text-accent" : "text-destructive"}`}>
-                          Class Avg: {Math.round(classAverages.avgTimeSpent / 60)}m
+                          Class Avg: {classAverages.avgTimeSpent}m
                           {weeklyStats.totalTimeSpent >= classAverages.avgTimeSpent ? " ↑" : " ↓"}
                         </span>
                       </div>
@@ -1500,7 +1500,7 @@ const StudentReportModal = ({
                         <p className="text-xs text-muted-foreground">Total sessions</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-accent">{Math.round(weeklyStats.totalTimeSpent / 60)}</p>
+                        <p className="text-2xl font-bold text-accent">{weeklyStats.totalTimeSpent}</p>
                         <p className="text-xs text-muted-foreground">Total minutes</p>
                       </div>
                       <div>
@@ -1678,7 +1678,7 @@ const StudentReportModal = ({
                             <p className="text-[10px] text-muted-foreground">sessions</p>
                             {day.timeSpent > 0 && (
                               <p className="text-[10px] text-muted-foreground mt-1">
-                                {Math.round(day.timeSpent / 60)}m
+                                {day.timeSpent}m
                               </p>
                             )}
                           </>

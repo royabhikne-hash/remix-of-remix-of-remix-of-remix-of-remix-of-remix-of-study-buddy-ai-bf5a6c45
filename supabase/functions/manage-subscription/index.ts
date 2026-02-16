@@ -575,8 +575,8 @@ const handler = async (req: Request): Promise<Response> => {
           const basicCount = subs?.filter(s => s.plan === 'basic').length || 0;
           const proCount = subs?.filter(s => s.plan === 'pro').length || 0;
 
-          // Calculate estimated revenue (Pro = ₹199/month)
-          const estimatedRevenue = proCount * 199;
+          // Calculate estimated revenue (Basic = ₹99/month, Pro = ₹199/month)
+          const estimatedRevenue = (basicCount * 99) + (proCount * 199);
 
           return {
             ...school,
