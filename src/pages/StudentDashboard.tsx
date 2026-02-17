@@ -12,15 +12,11 @@ import {
   XCircle,
   User,
   BarChart3,
-  MessageCircle,
-  Loader2,
-  History,
   CalendarDays,
   Sun,
   Trophy,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
-import ChatHistory from "@/components/ChatHistory";
 import StudentRankingCard from "@/components/StudentRankingCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -43,11 +39,8 @@ const StudentDashboard = () => {
   const { toast } = useToast();
   const { user, signOut, loading } = useAuth();
   const { t, language } = useLanguage();
-  const [showChatHistory, setShowChatHistory] = useState(false);
   const [userName, setUserName] = useState("Student");
   const [studentId, setStudentId] = useState<string | null>(null);
-  const [parentWhatsapp, setParentWhatsapp] = useState<string | null>(null);
-  const [sendingReport, setSendingReport] = useState(false);
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState<string>("");
@@ -140,7 +133,6 @@ const StudentDashboard = () => {
       if (student) {
         setUserName(student.full_name);
         setStudentId(student.id);
-        setParentWhatsapp(student.parent_whatsapp);
         setIsApproved(student.is_approved);
         setRejectionReason(student.rejection_reason || null);
         setSchoolName((student.schools as any)?.name || "Your School");
@@ -351,43 +343,6 @@ const StudentDashboard = () => {
 
   // handleEndStudy is now in StudyPage.tsx - study sessions are handled via route navigation
 
-  const handleSendReport = async () => {
-    if (!studentId || !parentWhatsapp) {
-      toast({
-        title: "Cannot send report",
-        description: "Student profile or parent WhatsApp not found.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setSendingReport(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-weekly-report', {
-        body: { studentId, testMode: true }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast({
-          title: "Report Sent! 📱",
-          description: `WhatsApp report sent to parent successfully.`,
-        });
-      } else {
-        throw new Error(data?.error || "Failed to send report");
-      }
-    } catch (err) {
-      console.error("Error sending report:", err);
-      toast({
-        title: "Failed to send report",
-        description: err instanceof Error ? err.message : "Please try again later.",
-        variant: "destructive"
-      });
-    } finally {
-      setSendingReport(false);
-    }
-  };
 
   const handleLogout = async () => {
     await signOut();
@@ -455,9 +410,6 @@ const StudentDashboard = () => {
     );
   }
 
-  if (showChatHistory && studentId) {
-    return <ChatHistory studentId={studentId} onClose={() => setShowChatHistory(false)} />;
-  }
 
   // Study sessions now use route navigation (/study) for WebView/PWA compatibility
 
@@ -521,34 +473,20 @@ const StudentDashboard = () => {
                 ? (language === 'en' ? "Great job studying today! Ready for more?" : "Aaj padhai achi ki! Aur karna hai?")
                 : (language === 'en' ? "What do you want to study today? Let's start!" : "Aaj kya padhna hai? Chal start karte hain!")}
             </p>
-            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
               <Button 
                 variant="hero" 
                 size="lg" 
-                className="text-sm sm:text-base touch-manipulation"
+                className="text-sm sm:text-base touch-manipulation px-8"
                 onClick={handleStartStudy}
                 onTouchStart={handleStartStudy}
               >
-                <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Play className="w-5 h-5" />
                 {language === 'en' ? 'Start Studying' : 'Padhai Shuru Karo'}
               </Button>
-              <Button variant="outline" size="default" className="text-xs sm:text-sm" onClick={() => setShowChatHistory(true)}>
-                <History className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                Chat History
-              </Button>
-              <Button variant="outline" size="default" className="text-xs sm:text-sm" onClick={() => navigate("/progress")}>
-                <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Button variant="outline" size="lg" className="text-sm sm:text-base" onClick={() => navigate("/progress")}>
+                <BarChart3 className="w-5 h-5" />
                 {t('nav.progress')}
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="default"
-                className="text-xs sm:text-sm"
-                onClick={handleSendReport} 
-                disabled={sendingReport}
-              >
-                {sendingReport ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" /> : <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />}
-                {t('action.sendReport')}
               </Button>
             </div>
           </div>
