@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Sun,
   Trophy,
+  Sparkles,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
@@ -463,31 +464,47 @@ const StudentDashboard = () => {
       {/* Main Content - ChatGPT-style wider layout */}
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
         {/* Welcome & Start Study */}
-        <div className="mb-6 sm:mb-8">
-          <div className="edu-card p-4 sm:p-6 md:p-8 text-center bg-gradient-to-br from-primary/10 to-accent/10">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
-              {language === 'en' ? `Hello, ${userName}!` : `Namaste, ${userName}!`} 👋
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
-              {todayStats.studied
-                ? (language === 'en' ? "Great job studying today! Ready for more?" : "Aaj padhai achi ki! Aur karna hai?")
-                : (language === 'en' ? "What do you want to study today? Let's start!" : "Aaj kya padhna hai? Chal start karte hain!")}
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button 
-                variant="hero" 
-                size="lg" 
-                className="text-sm sm:text-base touch-manipulation px-8"
-                onClick={handleStartStudy}
-                onTouchStart={handleStartStudy}
-              >
-                <Play className="w-5 h-5" />
-                {language === 'en' ? 'Start Studying' : 'Padhai Shuru Karo'}
-              </Button>
-              <Button variant="outline" size="lg" className="text-sm sm:text-base" onClick={() => navigate("/progress")}>
-                <BarChart3 className="w-5 h-5" />
-                {t('nav.progress')}
-              </Button>
+        <div className="mb-6 sm:mb-8 animate-fade-in">
+          <div className="relative overflow-hidden rounded-2xl border border-border p-5 sm:p-8 md:p-10 text-center"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12) 0%, hsl(var(--accent) / 0.12) 50%, hsl(var(--edu-purple) / 0.1) 100%)',
+            }}
+          >
+            {/* Animated background orbs */}
+            <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-primary/10 blur-3xl animate-pulse-slow" />
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 rounded-full bg-accent/10 blur-3xl animate-pulse-slow" style={{ animationDelay: '1.5s' }} />
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-primary animate-pulse-slow" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  {language === 'en' ? 'Daily Motivation' : 'Aaj Ki Motivation'}
+                </span>
+                <Sparkles className="w-5 h-5 text-accent animate-pulse-slow" style={{ animationDelay: '1s' }} />
+              </div>
+              
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2">
+                {language === 'en' ? `Hello, ${userName}!` : `Namaste, ${userName}!`} 👋
+              </h1>
+              
+              <MotivationalQuote language={language} studied={todayStats.studied} />
+              
+              <div className="flex flex-wrap justify-center gap-3 mt-5">
+                <Button 
+                  variant="hero" 
+                  size="lg" 
+                  className="text-sm sm:text-base touch-manipulation px-8 hover-scale"
+                  onClick={handleStartStudy}
+                  onTouchStart={handleStartStudy}
+                >
+                  <Play className="w-5 h-5" />
+                  {language === 'en' ? 'Start Studying' : 'Padhai Shuru Karo'}
+                </Button>
+                <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale" onClick={() => navigate("/progress")}>
+                  <BarChart3 className="w-5 h-5" />
+                  {t('nav.progress')}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -670,5 +687,42 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
 );
 
 StatCard.displayName = "StatCard";
+
+const QUOTES_EN = [
+  "Every expert was once a beginner. Keep going! 🚀",
+  "Small daily progress leads to big results! 📈",
+  "Your future self will thank you for studying today! 💪",
+  "Champions study when no one is watching! 🏆",
+  "Knowledge is the one thing no one can take from you! 🧠",
+  "Today's effort is tomorrow's success! ⭐",
+  "Be curious. Stay hungry for knowledge! 🔥",
+  "The more you learn, the more you earn! 💡",
+];
+
+const QUOTES_HI = [
+  "Har expert pehle beginner tha. Mehnat karte raho! 🚀",
+  "Roz ki chhoti mehnat bade result laati hai! 📈",
+  "Kal ka tum aaj ke liye thank karega! 💪",
+  "Champions tab padhte hain jab koi nahi dekhta! 🏆",
+  "Knowledge wo cheez hai jo koi cheen nahi sakta! 🧠",
+  "Aaj ki mehnat, kal ki safalta! ⭐",
+  "Curious raho. Padhai ka bhook rakho! 🔥",
+  "Jitna sikhoge, utna badhoge! 💡",
+];
+
+const MotivationalQuote = ({ language, studied }: { language: string; studied: boolean }) => {
+  const quote = React.useMemo(() => {
+    const quotes = language === 'en' ? QUOTES_EN : QUOTES_HI;
+    // Pick a quote based on the day so it changes daily
+    const dayIndex = new Date().getDate() % quotes.length;
+    return quotes[dayIndex];
+  }, [language]);
+
+  return (
+    <p className="text-sm sm:text-base text-muted-foreground italic max-w-lg mx-auto leading-relaxed">
+      "{quote}"
+    </p>
+  );
+};
 
 export default StudentDashboard;
