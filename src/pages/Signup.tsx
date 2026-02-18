@@ -15,15 +15,27 @@ interface School {
   school_id: string;
 }
 
+interface CoachingCenter {
+  id: string;
+  name: string;
+  coaching_id: string;
+}
+
+type StudentType = "school_student" | "coaching_student";
+
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signUp } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const [studentType, setStudentType] = useState<StudentType | "">("");
   const [schools, setSchools] = useState<School[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenter[]>([]);
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
+  const [selectedCoachingId, setSelectedCoachingId] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [loadingInstitutions, setLoadingInstitutions] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -43,27 +55,49 @@ const Signup = () => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Load schools on mount
+  // Load institutions when district changes and student type is selected
   useEffect(() => {
-    const loadSchools = async () => {
-      const { data, error } = await supabase.functions.invoke("get-schools-public", {
-        body: { action: "list" },
-      });
+    const district = formData.district.trim();
+    if (!district || !studentType) {
+      setSchools([]);
+      setCoachingCenters([]);
+      setSelectedSchoolId("");
+      setSelectedCoachingId("");
+      return;
+    }
 
-      if (error || data?.error) {
-        console.error("Load schools error:", error || data?.error);
-        return;
-      }
-
-      const list = (data?.schools as School[]) ?? [];
-      setSchools(list);
-      if (list.length > 0) {
-        setSelectedSchoolId(list[0].id);
+    const loadInstitutions = async () => {
+      setLoadingInstitutions(true);
+      try {
+        if (studentType === "school_student") {
+          const { data, error } = await supabase.functions.invoke("get-schools-public", {
+            body: { action: "list", district },
+          });
+          if (!error && !data?.error) {
+            const list = (data?.schools as School[]) ?? [];
+            setSchools(list);
+            setSelectedSchoolId("");
+          }
+        } else if (studentType === "coaching_student") {
+          const { data, error } = await supabase.functions.invoke("get-schools-public", {
+            body: { action: "list_coaching_centers", district },
+          });
+          if (!error && !data?.error) {
+            const list = (data?.coachingCenters as CoachingCenter[]) ?? [];
+            setCoachingCenters(list);
+            setSelectedCoachingId("");
+          }
+        }
+      } catch (err) {
+        console.error("Load institutions error:", err);
+      } finally {
+        setLoadingInstitutions(false);
       }
     };
 
-    loadSchools();
-  }, []);
+    const debounce = setTimeout(loadInstitutions, 500);
+    return () => clearTimeout(debounce);
+  }, [formData.district, studentType]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -95,6 +129,16 @@ const Signup = () => {
     e.preventDefault();
     setValidationErrors({});
     
+    // Validate student type
+    if (!studentType) {
+      toast({
+        title: "Student Type Required",
+        description: "Please select whether you are a School Student or Coaching Student.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate form data
     const validation = validateForm(signupSchema, formData);
     if (!validation.success && 'errors' in validation) {
@@ -106,10 +150,9 @@ const Signup = () => {
       });
       return;
     }
-    
-    // Photo is optional - students can sign up without uploading a photo
 
-    if (!selectedSchoolId) {
+    // Validate institution selection
+    if (studentType === "school_student" && !selectedSchoolId) {
       toast({
         title: "School Required",
         description: "Please select your school.",
@@ -118,10 +161,18 @@ const Signup = () => {
       return;
     }
 
+    if (studentType === "coaching_student" && !selectedCoachingId) {
+      toast({
+        title: "Coaching Center Required",
+        description: "Please select your coaching center.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Sign up with Supabase Auth
       const { error: authError, data: authData } = await signUp(formData.email, formData.password, {
         full_name: formData.fullName,
         phone: formData.phone,
@@ -131,7 +182,9 @@ const Signup = () => {
         district: formData.district,
         state: formData.state,
         parent_whatsapp: formData.parentWhatsapp,
-        school_id: selectedSchoolId,
+        school_id: studentType === "school_student" ? selectedSchoolId : null,
+        coaching_center_id: studentType === "coaching_student" ? selectedCoachingId : null,
+        student_type: studentType,
       });
 
       if (authError) {
@@ -148,11 +201,9 @@ const Signup = () => {
         return;
       }
 
-      // Check if user was created - for repeated signups, user might be null
       const user = authData?.user;
       
       if (!user) {
-        // This happens when email already exists (user_repeated_signup)
         toast({
           title: "Email Already Registered",
           description: "This email is already registered. Please login instead.",
@@ -162,7 +213,6 @@ const Signup = () => {
         return;
       }
 
-      // Check if user's identities is empty (another sign of existing account)
       if (user.identities && user.identities.length === 0) {
         toast({
           title: "Email Already Registered",
@@ -173,15 +223,15 @@ const Signup = () => {
         return;
       }
 
-      // Create student profile
       await createStudentProfile(user.id);
       
       toast({
         title: "Account Created! 🎉",
-        description: "Your account is pending school approval. You'll be notified once approved.",
+        description: studentType === "school_student"
+          ? "Your account is pending school approval. You'll be notified once approved."
+          : "Your account is pending coaching center approval. You'll be notified once approved.",
       });
       
-      // Navigate to login
       navigate("/login");
     } catch (error) {
       console.error("Signup error:", error);
@@ -198,7 +248,6 @@ const Signup = () => {
   const createStudentProfile = async (userId: string) => {
     let photoUrl: string | null = null;
 
-    // Upload photo to Supabase Storage
     if (photoFile) {
       const fileExt = photoFile.name.split('.').pop();
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
@@ -209,7 +258,6 @@ const Signup = () => {
 
       if (uploadError) {
         console.error("Photo upload error:", uploadError);
-        // Continue without photo rather than blocking signup
       } else {
         const { data: { publicUrl } } = supabase.storage
           .from('student-photos')
@@ -218,22 +266,31 @@ const Signup = () => {
       }
     }
 
-    // Create student profile with the selected school
+    const insertData: any = {
+      user_id: userId,
+      photo_url: photoUrl,
+      full_name: formData.fullName,
+      phone: formData.phone,
+      parent_whatsapp: formData.parentWhatsapp,
+      class: formData.class,
+      age: parseInt(formData.age),
+      board: formData.board,
+      district: formData.district.trim(),
+      state: formData.state.trim(),
+      student_type: studentType,
+    };
+
+    if (studentType === "school_student") {
+      insertData.school_id = selectedSchoolId;
+      insertData.coaching_center_id = null;
+    } else {
+      insertData.school_id = null;
+      insertData.coaching_center_id = selectedCoachingId;
+    }
+
     const { error: profileError } = await supabase
       .from("students")
-      .insert({
-        user_id: userId,
-        photo_url: photoUrl,
-        full_name: formData.fullName,
-        phone: formData.phone,
-        parent_whatsapp: formData.parentWhatsapp,
-        class: formData.class,
-        age: parseInt(formData.age),
-        board: formData.board,
-        school_id: selectedSchoolId,
-        district: formData.district.trim(),
-        state: formData.state.trim(),
-      });
+      .insert(insertData);
 
     if (profileError) {
       console.error("Profile creation error:", profileError);
@@ -266,6 +323,45 @@ const Signup = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              {/* Student Type Selection */}
+              <div>
+                <Label className="text-sm font-semibold mb-2 block">I am a... *</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentType("school_student");
+                      setSelectedSchoolId("");
+                      setSelectedCoachingId("");
+                    }}
+                    className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
+                      studentType === "school_student"
+                        ? "border-primary bg-primary/10 text-primary font-semibold"
+                        : "border-input hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="text-xl sm:text-2xl block mb-1">🏫</span>
+                    <span className="text-xs sm:text-sm">School Student</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentType("coaching_student");
+                      setSelectedSchoolId("");
+                      setSelectedCoachingId("");
+                    }}
+                    className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
+                      studentType === "coaching_student"
+                        ? "border-primary bg-primary/10 text-primary font-semibold"
+                        : "border-input hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="text-xl sm:text-2xl block mb-1">📚</span>
+                    <span className="text-xs sm:text-sm">Coaching Student</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Photo Upload */}
               <div className="flex flex-col items-center">
                 <Label className="mb-2 sm:mb-3 text-sm">Student Photo (Optional)</Label>
@@ -404,38 +500,8 @@ const Signup = () => {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="schoolId" className="text-sm">School *</Label>
-                <select
-                  id="schoolId"
-                  name="schoolId"
-                  className="flex h-10 sm:h-12 w-full rounded-lg sm:rounded-xl border border-input bg-background px-3 sm:px-4 py-2 sm:py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={selectedSchoolId}
-                  onChange={(e) => setSelectedSchoolId(e.target.value)}
-                  required
-                >
-                  <option value="">Select School</option>
-                  {schools.map((school) => (
-                    <option key={school.id} value={school.id}>
-                      {school.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
+              {/* State and District - moved above institution selection */}
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <Label htmlFor="district" className="text-sm">District *</Label>
-                  <Input
-                    id="district"
-                    name="district"
-                    placeholder="Your district"
-                    value={formData.district}
-                    onChange={handleInputChange}
-                    required
-                    className="h-10 sm:h-12 text-sm"
-                  />
-                </div>
                 <div>
                   <Label htmlFor="state" className="text-sm">State *</Label>
                   <Input
@@ -448,7 +514,74 @@ const Signup = () => {
                     className="h-10 sm:h-12 text-sm"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="district" className="text-sm">District *</Label>
+                  <Input
+                    id="district"
+                    name="district"
+                    placeholder="Your district"
+                    value={formData.district}
+                    onChange={handleInputChange}
+                    required
+                    className="h-10 sm:h-12 text-sm"
+                  />
+                </div>
               </div>
+
+              {/* Institution Selection - shows after district and student type */}
+              {studentType && formData.district.trim() && (
+                <div>
+                  <Label htmlFor="institution" className="text-sm">
+                    {studentType === "school_student" ? "School" : "Coaching Center"} *
+                  </Label>
+                  {loadingInstitutions ? (
+                    <div className="flex items-center gap-2 h-12 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </div>
+                  ) : studentType === "school_student" ? (
+                    <>
+                      <select
+                        id="institution"
+                        className="flex h-10 sm:h-12 w-full rounded-lg sm:rounded-xl border border-input bg-background px-3 sm:px-4 py-2 sm:py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={selectedSchoolId}
+                        onChange={(e) => setSelectedSchoolId(e.target.value)}
+                        required
+                      >
+                        <option value="">Select School</option>
+                        {schools.map((school) => (
+                          <option key={school.id} value={school.id}>
+                            {school.name}
+                          </option>
+                        ))}
+                      </select>
+                      {schools.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">No schools found in this district</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        id="institution"
+                        className="flex h-10 sm:h-12 w-full rounded-lg sm:rounded-xl border border-input bg-background px-3 sm:px-4 py-2 sm:py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={selectedCoachingId}
+                        onChange={(e) => setSelectedCoachingId(e.target.value)}
+                        required
+                      >
+                        <option value="">Select Coaching Center</option>
+                        {coachingCenters.map((cc) => (
+                          <option key={cc.id} value={cc.id}>
+                            {cc.name}
+                          </option>
+                        ))}
+                      </select>
+                      {coachingCenters.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">No coaching centers found in this district</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="password" className="text-sm">Password *</Label>

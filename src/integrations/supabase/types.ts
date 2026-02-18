@@ -206,6 +206,92 @@ export type Database = {
           },
         ]
       }
+      coaching_centers: {
+        Row: {
+          coaching_id: string
+          contact_whatsapp: string | null
+          created_at: string
+          district: string | null
+          email: string | null
+          fee_paid: boolean | null
+          id: string
+          is_banned: boolean | null
+          name: string
+          password_hash: string
+          password_reset_required: boolean | null
+          password_updated_at: string | null
+          state: string | null
+        }
+        Insert: {
+          coaching_id: string
+          contact_whatsapp?: string | null
+          created_at?: string
+          district?: string | null
+          email?: string | null
+          fee_paid?: boolean | null
+          id?: string
+          is_banned?: boolean | null
+          name: string
+          password_hash: string
+          password_reset_required?: boolean | null
+          password_updated_at?: string | null
+          state?: string | null
+        }
+        Update: {
+          coaching_id?: string
+          contact_whatsapp?: string | null
+          created_at?: string
+          district?: string | null
+          email?: string | null
+          fee_paid?: boolean | null
+          id?: string
+          is_banned?: boolean | null
+          name?: string
+          password_hash?: string
+          password_reset_required?: boolean | null
+          password_updated_at?: string | null
+          state?: string | null
+        }
+        Relationships: []
+      }
+      daily_usage: {
+        Row: {
+          chats_used: number
+          created_at: string
+          id: string
+          images_used: number
+          student_id: string
+          updated_at: string
+          usage_date: string
+        }
+        Insert: {
+          chats_used?: number
+          created_at?: string
+          id?: string
+          images_used?: number
+          student_id: string
+          updated_at?: string
+          usage_date?: string
+        }
+        Update: {
+          chats_used?: number
+          created_at?: string
+          id?: string
+          images_used?: number
+          student_id?: string
+          updated_at?: string
+          usage_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_usage_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       login_attempts: {
         Row: {
           attempt_type: string
@@ -542,6 +628,7 @@ export type Database = {
           approved_by: string | null
           board: Database["public"]["Enums"]["board_type"]
           class: string
+          coaching_center_id: string | null
           created_at: string
           district: string
           full_name: string
@@ -554,6 +641,7 @@ export type Database = {
           rejection_reason: string | null
           school_id: string | null
           state: string
+          student_type: Database["public"]["Enums"]["student_type"]
           updated_at: string
           user_id: string
         }
@@ -563,6 +651,7 @@ export type Database = {
           approved_by?: string | null
           board?: Database["public"]["Enums"]["board_type"]
           class: string
+          coaching_center_id?: string | null
           created_at?: string
           district: string
           full_name: string
@@ -575,6 +664,7 @@ export type Database = {
           rejection_reason?: string | null
           school_id?: string | null
           state: string
+          student_type?: Database["public"]["Enums"]["student_type"]
           updated_at?: string
           user_id: string
         }
@@ -584,6 +674,7 @@ export type Database = {
           approved_by?: string | null
           board?: Database["public"]["Enums"]["board_type"]
           class?: string
+          coaching_center_id?: string | null
           created_at?: string
           district?: string
           full_name?: string
@@ -596,10 +687,25 @@ export type Database = {
           rejection_reason?: string | null
           school_id?: string | null
           state?: string
+          student_type?: Database["public"]["Enums"]["student_type"]
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "students_coaching_center_id_fkey"
+            columns: ["coaching_center_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_coaching_center_id_fkey"
+            columns: ["coaching_center_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_centers_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "students_school_id_fkey"
             columns: ["school_id"]
@@ -771,6 +877,33 @@ export type Database = {
       }
     }
     Views: {
+      coaching_centers_public: {
+        Row: {
+          coaching_id: string | null
+          created_at: string | null
+          district: string | null
+          id: string | null
+          name: string | null
+          state: string | null
+        }
+        Insert: {
+          coaching_id?: string | null
+          created_at?: string | null
+          district?: string | null
+          id?: string | null
+          name?: string | null
+          state?: string | null
+        }
+        Update: {
+          coaching_id?: string | null
+          created_at?: string | null
+          district?: string | null
+          id?: string | null
+          name?: string | null
+          state?: string | null
+        }
+        Relationships: []
+      }
       schools_public: {
         Row: {
           created_at: string | null
@@ -823,7 +956,8 @@ export type Database = {
       admin_role: "super_admin" | "admin"
       board_type: "CBSE" | "ICSE" | "Bihar Board" | "Other"
       improvement_trend: "up" | "down" | "stable"
-      subscription_plan: "basic" | "pro"
+      student_type: "school_student" | "coaching_student"
+      subscription_plan: "basic" | "pro" | "starter"
       understanding_level: "weak" | "average" | "good" | "excellent"
       upgrade_request_status: "pending" | "approved" | "rejected" | "blocked"
     }
@@ -956,7 +1090,8 @@ export const Constants = {
       admin_role: ["super_admin", "admin"],
       board_type: ["CBSE", "ICSE", "Bihar Board", "Other"],
       improvement_trend: ["up", "down", "stable"],
-      subscription_plan: ["basic", "pro"],
+      student_type: ["school_student", "coaching_student"],
+      subscription_plan: ["basic", "pro", "starter"],
       understanding_level: ["weak", "average", "good", "excellent"],
       upgrade_request_status: ["pending", "approved", "rejected", "blocked"],
     },

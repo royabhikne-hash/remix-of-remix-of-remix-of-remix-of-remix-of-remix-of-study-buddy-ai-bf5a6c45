@@ -5,19 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type SchoolPublicRow = {
-  id: string;
-  school_id: string;
-  name: string;
-  district: string | null;
-  state: string | null;
-  fee_paid: boolean | null;
-  is_banned: boolean | null;
-  created_at: string;
-};
-
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -26,12 +14,39 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = (body?.action as string | undefined) ?? "list";
     const schoolId = (body?.school_id as string | undefined) ?? undefined;
+    const district = (body?.district as string | undefined) ?? undefined;
+    const institutionType = (body?.institution_type as string | undefined) ?? undefined;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const selectCols = "id, school_id, name, district, state, fee_paid, is_banned, created_at";
+    // Return coaching centers list
+    if (action === "list_coaching_centers") {
+      let query = supabase
+        .from("coaching_centers")
+        .select("id, coaching_id, name, district, state, created_at")
+        .order("name", { ascending: true });
+
+      if (district) {
+        query = query.ilike("district", district.trim());
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("list coaching centers error:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to load coaching centers" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ coachingCenters: data ?? [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (action === "by_school_id") {
       if (!schoolId) {
@@ -43,7 +58,7 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabase
         .from("schools")
-        .select(selectCols)
+        .select("id, school_id, name, district, state, fee_paid, is_banned, created_at")
         .eq("school_id", schoolId)
         .maybeSingle();
 
@@ -56,15 +71,22 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ school: (data as SchoolPublicRow | null) ?? null }),
+        JSON.stringify({ school: data ?? null }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { data, error } = await supabase
+    // Default: list schools, optionally filtered by district
+    let query = supabase
       .from("schools")
-      .select(selectCols)
+      .select("id, school_id, name, district, state, fee_paid, is_banned, created_at")
       .order("name", { ascending: true });
+
+    if (district) {
+      query = query.ilike("district", district.trim());
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("get-schools-public list error:", error);
@@ -75,7 +97,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ schools: (data as SchoolPublicRow[]) ?? [] }),
+      JSON.stringify({ schools: data ?? [] }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
