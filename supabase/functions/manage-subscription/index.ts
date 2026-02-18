@@ -5,17 +5,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type SubscriptionAction = 
-  | "get_requests"      // School: Get all pending upgrade requests
-  | "approve_request"   // School: Approve a Pro plan request
-  | "reject_request"    // School: Reject a request
-  | "block_student"     // School: Block a student (revoke Pro immediately)
-  | "cancel_pro"        // School: Cancel a student's Pro subscription
-  | "request_upgrade"   // Student: Request Pro plan
-  | "get_subscription"  // Student: Get own subscription details
-  | "get_school_stats"  // Super Admin: Get subscription stats per school
-  | "increment_tts"     // System: Increment TTS usage count
-  | "check_expiry";     // System: Check and handle expired subscriptions
+// Plan limits configuration
+const PLAN_LIMITS: Record<string, { chatsPerDay: number; imagesPerDay: number; premiumTTS: boolean; monthlyPrice: number }> = {
+  starter: { chatsPerDay: 20, imagesPerDay: 3, premiumTTS: false, monthlyPrice: 50 },
+  basic: { chatsPerDay: 60, imagesPerDay: 7, premiumTTS: false, monthlyPrice: 99 },
+  pro: { chatsPerDay: 100, imagesPerDay: 15, premiumTTS: true, monthlyPrice: 199 },
+};
+
+type SubscriptionAction =
+  | "get_requests" | "approve_request" | "reject_request"
+  | "block_student" | "cancel_pro" | "request_upgrade"
+  | "get_subscription" | "get_school_stats" | "increment_tts"
+  | "check_expiry" | "check_daily_usage" | "get_daily_usage";
 
 interface SubscriptionRequest {
   action: SubscriptionAction;
@@ -27,51 +28,57 @@ interface SubscriptionRequest {
   rejectionReason?: string;
   adminSessionToken?: string;
   ttsCharacters?: number;
+  usageType?: "chat" | "image";
+  requestedPlan?: string;
+  coachingSessionToken?: string;
+  coachingUuid?: string;
 }
 
-// Validate school session token
-async function validateSchoolSession(
-  supabase: any,
-  token: string,
-  expectedSchoolId?: string
-): Promise<{ valid: boolean; schoolUuid?: string }> {
+// Validate institution session (school or coaching)
+async function validateInstitutionSession(
+  supabase: any, token: string, expectedType: 'school' | 'coaching', expectedId?: string
+): Promise<{ valid: boolean; institutionUuid?: string }> {
   const { data, error } = await supabase
     .from('session_tokens')
     .select('user_id, user_type, expires_at, is_revoked')
-    .eq('token', token)
-    .maybeSingle();
-  
+    .eq('token', token).maybeSingle();
   if (error || !data) return { valid: false };
   if (data.is_revoked || new Date(data.expires_at) < new Date()) return { valid: false };
-  if (data.user_type !== 'school') return { valid: false };
-  if (expectedSchoolId && data.user_id !== expectedSchoolId) return { valid: false };
-  
-  return { valid: true, schoolUuid: data.user_id };
+  if (data.user_type !== expectedType) return { valid: false };
+  if (expectedId && data.user_id !== expectedId) return { valid: false };
+  return { valid: true, institutionUuid: data.user_id };
 }
 
-// Validate admin session token
+// Validate admin session
 async function validateAdminSession(
-  supabase: any,
-  token: string
+  supabase: any, token: string
 ): Promise<{ valid: boolean; adminId?: string; role?: string }> {
   const { data, error } = await supabase
     .from('session_tokens')
     .select('user_id, user_type, expires_at, is_revoked')
-    .eq('token', token)
-    .maybeSingle();
-  
+    .eq('token', token).maybeSingle();
   if (error || !data) return { valid: false };
   if (data.is_revoked || new Date(data.expires_at) < new Date()) return { valid: false };
   if (data.user_type !== 'admin') return { valid: false };
-  
-  // Get admin role
-  const { data: admin } = await supabase
-    .from('admins')
-    .select('role')
-    .eq('id', data.user_id)
-    .maybeSingle();
-  
+  const { data: admin } = await supabase.from('admins').select('role').eq('id', data.user_id).maybeSingle();
   return { valid: true, adminId: data.user_id, role: admin?.role };
+}
+
+// Get IST date string for daily usage tracking
+function getISTDateString(): string {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(now.getTime() + istOffset);
+  return istDate.toISOString().split('T')[0];
+}
+
+// Verify student belongs to institution
+async function verifyStudentInstitution(
+  supabase: any, studentId: string, institutionId: string, institutionType: 'school' | 'coaching'
+): Promise<boolean> {
+  const field = institutionType === 'school' ? 'school_id' : 'coaching_center_id';
+  const { data } = await supabase.from('students').select(field).eq('id', studentId).maybeSingle();
+  return data?.[field] === institutionId;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -81,17 +88,14 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const body = (await req.json()) as SubscriptionRequest;
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(
         JSON.stringify({ success: false, error: "Backend configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
     const admin = createClient(supabaseUrl, supabaseServiceKey);
 
     switch (body.action) {
@@ -104,13 +108,9 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Check if student already has a pending request
         const { data: existing } = await admin
-          .from('upgrade_requests')
-          .select('id, status')
-          .eq('student_id', body.studentId)
-          .eq('status', 'pending')
-          .maybeSingle();
+          .from('upgrade_requests').select('id, status')
+          .eq('student_id', body.studentId).eq('status', 'pending').maybeSingle();
 
         if (existing) {
           return new Response(
@@ -119,12 +119,14 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Check current subscription
+        // Get student info and current subscription
+        const { data: studentInfo } = await admin
+          .from('students').select('student_type')
+          .eq('id', body.studentId).maybeSingle();
+
         const { data: sub } = await admin
-          .from('subscriptions')
-          .select('plan')
-          .eq('student_id', body.studentId)
-          .maybeSingle();
+          .from('subscriptions').select('plan')
+          .eq('student_id', body.studentId).maybeSingle();
 
         if (sub?.plan === 'pro') {
           return new Response(
@@ -133,14 +135,37 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Create upgrade request
+        // Determine requested plan based on student type and upgrade rules
+        let requestedPlan = body.requestedPlan || 'pro';
+        
+        // School students can only upgrade to Pro
+        if (studentInfo?.student_type === 'school_student' && requestedPlan !== 'pro') {
+          return new Response(
+            JSON.stringify({ success: false, error: "School students can only upgrade to Pro" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Coaching students can upgrade to Basic or Pro
+        if (studentInfo?.student_type === 'coaching_student') {
+          if (!['basic', 'pro'].includes(requestedPlan)) {
+            return new Response(
+              JSON.stringify({ success: false, error: "Invalid plan requested" }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          // Can't downgrade
+          if (sub?.plan === 'basic' && requestedPlan === 'basic') {
+            return new Response(
+              JSON.stringify({ success: false, error: "You already have a Basic plan" }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+
         const { error: insertError } = await admin
           .from('upgrade_requests')
-          .insert({
-            student_id: body.studentId,
-            requested_plan: 'pro',
-            status: 'pending',
-          });
+          .insert({ student_id: body.studentId, requested_plan: requestedPlan as any, status: 'pending' });
 
         if (insertError) {
           console.error("Insert error:", insertError);
@@ -165,24 +190,140 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         const { data: subscription } = await admin
-          .from('subscriptions')
-          .select('*')
-          .eq('student_id', body.studentId)
-          .maybeSingle();
+          .from('subscriptions').select('*')
+          .eq('student_id', body.studentId).maybeSingle();
 
         const { data: pendingRequest } = await admin
-          .from('upgrade_requests')
-          .select('*')
+          .from('upgrade_requests').select('*')
           .eq('student_id', body.studentId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+        // Get student type for plan visibility
+        const { data: studentInfo } = await admin
+          .from('students').select('student_type')
+          .eq('id', body.studentId).maybeSingle();
+
+        // Get daily usage
+        const todayIST = getISTDateString();
+        const { data: dailyUsage } = await admin
+          .from('daily_usage').select('*')
+          .eq('student_id', body.studentId).eq('usage_date', todayIST).maybeSingle();
+
+        const plan = subscription?.plan || (studentInfo?.student_type === 'coaching_student' ? 'starter' : 'basic');
+        const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            subscription: subscription || { plan: 'basic', tts_used: 0, tts_limit: 150000 },
-            pendingRequest
+          JSON.stringify({
+            success: true,
+            subscription: subscription || { plan, tts_used: 0, tts_limit: plan === 'pro' ? 150000 : 0 },
+            pendingRequest,
+            studentType: studentInfo?.student_type || 'school_student',
+            dailyUsage: {
+              chatsUsed: dailyUsage?.chats_used || 0,
+              imagesUsed: dailyUsage?.images_used || 0,
+              chatsLimit: limits.chatsPerDay,
+              imagesLimit: limits.imagesPerDay,
+            },
+            planLimits: limits,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "get_daily_usage": {
+        if (!body.studentId) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Student ID required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: sub } = await admin
+          .from('subscriptions').select('plan')
+          .eq('student_id', body.studentId).maybeSingle();
+
+        const plan = sub?.plan || 'basic';
+        const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
+        const todayIST = getISTDateString();
+
+        const { data: usage } = await admin
+          .from('daily_usage').select('*')
+          .eq('student_id', body.studentId).eq('usage_date', todayIST).maybeSingle();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            chatsUsed: usage?.chats_used || 0,
+            imagesUsed: usage?.images_used || 0,
+            chatsLimit: limits.chatsPerDay,
+            imagesLimit: limits.imagesPerDay,
+            plan,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "check_daily_usage": {
+        if (!body.studentId || !body.usageType) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Student ID and usage type required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: sub } = await admin
+          .from('subscriptions').select('plan')
+          .eq('student_id', body.studentId).maybeSingle();
+
+        const plan = sub?.plan || 'basic';
+        const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
+        const todayIST = getISTDateString();
+
+        // Get or create daily usage record
+        let { data: usage } = await admin
+          .from('daily_usage').select('*')
+          .eq('student_id', body.studentId).eq('usage_date', todayIST).maybeSingle();
+
+        if (!usage) {
+          const { data: newUsage } = await admin
+            .from('daily_usage')
+            .insert({ student_id: body.studentId, usage_date: todayIST, chats_used: 0, images_used: 0 })
+            .select().single();
+          usage = newUsage;
+        }
+
+        const currentCount = body.usageType === 'chat' ? (usage?.chats_used || 0) : (usage?.images_used || 0);
+        const limit = body.usageType === 'chat' ? limits.chatsPerDay : limits.imagesPerDay;
+
+        if (currentCount >= limit) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              allowed: false,
+              currentCount,
+              limit,
+              plan,
+              message: `Daily ${body.usageType} limit reached. Upgrade your plan for more.`,
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Increment usage
+        const updateField = body.usageType === 'chat' ? 'chats_used' : 'images_used';
+        await admin
+          .from('daily_usage')
+          .update({ [updateField]: currentCount + 1 })
+          .eq('student_id', body.studentId).eq('usage_date', todayIST);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            allowed: true,
+            currentCount: currentCount + 1,
+            limit,
+            remaining: limit - currentCount - 1,
+            plan,
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -196,12 +337,9 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Get current subscription
         const { data: sub } = await admin
-          .from('subscriptions')
-          .select('*')
-          .eq('student_id', body.studentId)
-          .maybeSingle();
+          .from('subscriptions').select('*')
+          .eq('student_id', body.studentId).maybeSingle();
 
         if (!sub) {
           return new Response(
@@ -210,22 +348,18 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Check if Pro plan and has quota
         const isPro = sub.plan === 'pro' && sub.is_active;
         const hasQuota = sub.tts_used + body.ttsCharacters <= sub.tts_limit;
         const isExpired = sub.end_date && new Date(sub.end_date) < new Date();
 
         if (isPro && hasQuota && !isExpired) {
-          // Increment usage
-          await admin
-            .from('subscriptions')
+          await admin.from('subscriptions')
             .update({ tts_used: sub.tts_used + body.ttsCharacters })
             .eq('id', sub.id);
 
           return new Response(
-            JSON.stringify({ 
-              success: true, 
-              usePremiumTTS: true,
+            JSON.stringify({
+              success: true, usePremiumTTS: true,
               ttsUsed: sub.tts_used + body.ttsCharacters,
               ttsLimit: sub.tts_limit,
               ttsRemaining: sub.tts_limit - (sub.tts_used + body.ttsCharacters)
@@ -234,7 +368,7 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        let reason = "Basic plan";
+        let reason = "Basic/Starter plan";
         if (isPro && !hasQuota) reason = "TTS limit reached";
         if (isPro && isExpired) reason = "Subscription expired";
 
@@ -244,16 +378,21 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // =============== SCHOOL ADMIN ACTIONS ===============
+      // =============== INSTITUTION ADMIN ACTIONS ===============
       case "get_requests": {
-        if (!body.sessionToken || !body.schoolUuid) {
+        // Support both school and coaching session tokens
+        const sessionToken = body.sessionToken || body.coachingSessionToken;
+        const institutionId = body.schoolUuid || body.coachingUuid;
+        const institutionType = body.coachingUuid ? 'coaching' : 'school';
+        
+        if (!sessionToken || !institutionId) {
           return new Response(
-            JSON.stringify({ success: false, error: "Session token and school ID required" }),
+            JSON.stringify({ success: false, error: "Session token and institution ID required" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const validation = await validateSchoolSession(admin, body.sessionToken, body.schoolUuid);
+        const validation = await validateInstitutionSession(admin, sessionToken, institutionType, institutionId);
         if (!validation.valid) {
           return new Response(
             JSON.stringify({ success: false, error: "Invalid or expired session" }),
@@ -261,15 +400,15 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Get all students with their subscriptions and pending requests
+        const studentField = institutionType === 'school' ? 'school_id' : 'coaching_center_id';
         const { data: students, error: studentsError } = await admin
           .from('students')
           .select(`
-            id, full_name, class, photo_url, is_approved, is_banned,
+            id, full_name, class, photo_url, is_approved, is_banned, student_type,
             subscriptions (plan, tts_used, tts_limit, start_date, end_date, is_active),
-            upgrade_requests (id, status, requested_at, rejection_reason)
+            upgrade_requests (id, status, requested_at, rejection_reason, requested_plan)
           `)
-          .eq('school_id', body.schoolUuid)
+          .eq(studentField, institutionId)
           .eq('is_approved', true);
 
         if (studentsError) {
@@ -280,36 +419,35 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Separate pending requests
-        const pendingRequests = students?.filter(s => 
-          Array.isArray(s.upgrade_requests) && 
+        const pendingRequests = students?.filter(s =>
+          Array.isArray(s.upgrade_requests) &&
           s.upgrade_requests.some((r: any) => r.status === 'pending')
         ).map(s => ({
           ...s,
-          pendingRequest: Array.isArray(s.upgrade_requests) 
+          pendingRequest: Array.isArray(s.upgrade_requests)
             ? s.upgrade_requests.find((r: any) => r.status === 'pending')
             : null
         })) || [];
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            students: students || [],
-            pendingRequests
-          }),
+          JSON.stringify({ success: true, students: students || [], pendingRequests }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       case "approve_request": {
-        if (!body.sessionToken || !body.schoolUuid || !body.requestId) {
+        const sessionToken = body.sessionToken || body.coachingSessionToken;
+        const institutionId = body.schoolUuid || body.coachingUuid;
+        const institutionType = body.coachingUuid ? 'coaching' : 'school';
+
+        if (!sessionToken || !institutionId || !body.requestId) {
           return new Response(
             JSON.stringify({ success: false, error: "Missing required fields" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const validation = await validateSchoolSession(admin, body.sessionToken, body.schoolUuid);
+        const validation = await validateInstitutionSession(admin, sessionToken, institutionType, institutionId);
         if (!validation.valid) {
           return new Response(
             JSON.stringify({ success: false, error: "Invalid session" }),
@@ -317,12 +455,9 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Get the request and verify it belongs to school's student
         const { data: request } = await admin
-          .from('upgrade_requests')
-          .select('student_id, status')
-          .eq('id', body.requestId)
-          .maybeSingle();
+          .from('upgrade_requests').select('student_id, status, requested_plan')
+          .eq('id', body.requestId).maybeSingle();
 
         if (!request || request.status !== 'pending') {
           return new Response(
@@ -331,60 +466,58 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Verify student belongs to this school
-        const { data: student } = await admin
-          .from('students')
-          .select('school_id')
-          .eq('id', request.student_id)
-          .maybeSingle();
-
-        if (student?.school_id !== body.schoolUuid) {
+        const belongs = await verifyStudentInstitution(admin, request.student_id, institutionId, institutionType);
+        if (!belongs) {
           return new Response(
             JSON.stringify({ success: false, error: "Unauthorized" }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Update request status
-        await admin
-          .from('upgrade_requests')
-          .update({
-            status: 'approved',
-            processed_at: new Date().toISOString(),
-            processed_by: body.schoolUuid
-          })
+        await admin.from('upgrade_requests')
+          .update({ status: 'approved', processed_at: new Date().toISOString(), processed_by: institutionId })
           .eq('id', body.requestId);
 
-        // Activate Pro plan for 30 days
+        const approvedPlan = request.requested_plan || 'pro';
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + 30);
 
-        await admin
-          .from('subscriptions')
-          .update({
-            plan: 'pro',
-            start_date: new Date().toISOString(),
-            end_date: endDate.toISOString(),
-            tts_used: 0,
-            is_active: true
-          })
+        const updateData: any = {
+          plan: approvedPlan,
+          start_date: new Date().toISOString(),
+          end_date: endDate.toISOString(),
+          is_active: true
+        };
+
+        // Reset TTS for pro plan
+        if (approvedPlan === 'pro') {
+          updateData.tts_used = 0;
+          updateData.tts_limit = 150000;
+        }
+
+        await admin.from('subscriptions')
+          .update(updateData)
           .eq('student_id', request.student_id);
 
         return new Response(
-          JSON.stringify({ success: true, message: "Pro plan activated for 30 days" }),
+          JSON.stringify({ success: true, message: `${approvedPlan} plan activated for 30 days` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       case "reject_request": {
-        if (!body.sessionToken || !body.schoolUuid || !body.requestId) {
+        const sessionToken = body.sessionToken || body.coachingSessionToken;
+        const institutionId = body.schoolUuid || body.coachingUuid;
+        const institutionType = body.coachingUuid ? 'coaching' : 'school';
+
+        if (!sessionToken || !institutionId || !body.requestId) {
           return new Response(
             JSON.stringify({ success: false, error: "Missing required fields" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const validation = await validateSchoolSession(admin, body.sessionToken, body.schoolUuid);
+        const validation = await validateInstitutionSession(admin, sessionToken, institutionType, institutionId);
         if (!validation.valid) {
           return new Response(
             JSON.stringify({ success: false, error: "Invalid session" }),
@@ -392,12 +525,9 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Get request and verify ownership
         const { data: request } = await admin
-          .from('upgrade_requests')
-          .select('student_id, status')
-          .eq('id', body.requestId)
-          .maybeSingle();
+          .from('upgrade_requests').select('student_id, status')
+          .eq('id', body.requestId).maybeSingle();
 
         if (!request || request.status !== 'pending') {
           return new Response(
@@ -406,26 +536,19 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: student } = await admin
-          .from('students')
-          .select('school_id')
-          .eq('id', request.student_id)
-          .maybeSingle();
-
-        if (student?.school_id !== body.schoolUuid) {
+        const belongs = await verifyStudentInstitution(admin, request.student_id, institutionId, institutionType);
+        if (!belongs) {
           return new Response(
             JSON.stringify({ success: false, error: "Unauthorized" }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        await admin
-          .from('upgrade_requests')
+        await admin.from('upgrade_requests')
           .update({
-            status: 'rejected',
-            processed_at: new Date().toISOString(),
-            processed_by: body.schoolUuid,
-            rejection_reason: body.rejectionReason || 'Request rejected by school'
+            status: 'rejected', processed_at: new Date().toISOString(),
+            processed_by: institutionId,
+            rejection_reason: body.rejectionReason || 'Request rejected'
           })
           .eq('id', body.requestId);
 
@@ -436,14 +559,18 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       case "block_student": {
-        if (!body.sessionToken || !body.schoolUuid || !body.studentId) {
+        const sessionToken = body.sessionToken || body.coachingSessionToken;
+        const institutionId = body.schoolUuid || body.coachingUuid;
+        const institutionType = body.coachingUuid ? 'coaching' : 'school';
+
+        if (!sessionToken || !institutionId || !body.studentId) {
           return new Response(
             JSON.stringify({ success: false, error: "Missing required fields" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const validation = await validateSchoolSession(admin, body.sessionToken, body.schoolUuid);
+        const validation = await validateInstitutionSession(admin, sessionToken, institutionType, institutionId);
         if (!validation.valid) {
           return new Response(
             JSON.stringify({ success: false, error: "Invalid session" }),
@@ -451,39 +578,27 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Verify student belongs to school
-        const { data: student } = await admin
-          .from('students')
-          .select('school_id')
-          .eq('id', body.studentId)
-          .maybeSingle();
-
-        if (student?.school_id !== body.schoolUuid) {
+        const belongs = await verifyStudentInstitution(admin, body.studentId, institutionId, institutionType);
+        if (!belongs) {
           return new Response(
-            JSON.stringify({ success: false, error: "Student not found in your school" }),
+            JSON.stringify({ success: false, error: "Student not found in your institution" }),
             { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Mark any pending requests as blocked
-        await admin
-          .from('upgrade_requests')
-          .update({
-            status: 'blocked',
-            processed_at: new Date().toISOString(),
-            processed_by: body.schoolUuid
-          })
-          .eq('student_id', body.studentId)
-          .eq('status', 'pending');
+        await admin.from('upgrade_requests')
+          .update({ status: 'blocked', processed_at: new Date().toISOString(), processed_by: institutionId })
+          .eq('student_id', body.studentId).eq('status', 'pending');
 
-        // Downgrade to basic immediately
-        await admin
-          .from('subscriptions')
-          .update({
-            plan: 'basic',
-            end_date: null,
-            is_active: true
-          })
+        // Get student type to determine downgrade plan
+        const { data: studentInfo } = await admin
+          .from('students').select('student_type')
+          .eq('id', body.studentId).maybeSingle();
+
+        const downgradePlan = studentInfo?.student_type === 'coaching_student' ? 'starter' : 'basic';
+
+        await admin.from('subscriptions')
+          .update({ plan: downgradePlan, end_date: null, is_active: true })
           .eq('student_id', body.studentId);
 
         return new Response(
@@ -493,14 +608,18 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       case "cancel_pro": {
-        if (!body.sessionToken || !body.schoolUuid || !body.studentId) {
+        const sessionToken = body.sessionToken || body.coachingSessionToken;
+        const institutionId = body.schoolUuid || body.coachingUuid;
+        const institutionType = body.coachingUuid ? 'coaching' : 'school';
+
+        if (!sessionToken || !institutionId || !body.studentId) {
           return new Response(
             JSON.stringify({ success: false, error: "Missing required fields" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const validation = await validateSchoolSession(admin, body.sessionToken, body.schoolUuid);
+        const validation = await validateInstitutionSession(admin, sessionToken, institutionType, institutionId);
         if (!validation.valid) {
           return new Response(
             JSON.stringify({ success: false, error: "Invalid session" }),
@@ -508,26 +627,22 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { data: student } = await admin
-          .from('students')
-          .select('school_id')
-          .eq('id', body.studentId)
-          .maybeSingle();
-
-        if (student?.school_id !== body.schoolUuid) {
+        const belongs = await verifyStudentInstitution(admin, body.studentId, institutionId, institutionType);
+        if (!belongs) {
           return new Response(
-            JSON.stringify({ success: false, error: "Student not found in your school" }),
+            JSON.stringify({ success: false, error: "Student not found in your institution" }),
             { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        await admin
-          .from('subscriptions')
-          .update({
-            plan: 'basic',
-            end_date: null,
-            is_active: true
-          })
+        const { data: studentInfo } = await admin
+          .from('students').select('student_type')
+          .eq('id', body.studentId).maybeSingle();
+
+        const downgradePlan = studentInfo?.student_type === 'coaching_student' ? 'starter' : 'basic';
+
+        await admin.from('subscriptions')
+          .update({ plan: downgradePlan, end_date: null, is_active: true })
           .eq('student_id', body.studentId);
 
         return new Response(
@@ -553,54 +668,61 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Get all schools with their subscription stats
-        const { data: schools } = await admin
-          .from('schools')
-          .select('id, name, school_id, district, state');
-
+        // Get school stats
+        const { data: schools } = await admin.from('schools').select('id, name, school_id, district, state');
         const schoolStats = await Promise.all((schools || []).map(async (school) => {
-          // Get student counts
           const { count: totalStudents } = await admin
-            .from('students')
-            .select('id', { count: 'exact', head: true })
-            .eq('school_id', school.id)
-            .eq('is_approved', true);
+            .from('students').select('id', { count: 'exact', head: true })
+            .eq('school_id', school.id).eq('is_approved', true);
 
-          // Get subscription breakdown
           const { data: subs } = await admin
-            .from('subscriptions')
-            .select('plan, students!inner(school_id)')
+            .from('subscriptions').select('plan, students!inner(school_id)')
             .eq('students.school_id', school.id);
 
           const basicCount = subs?.filter(s => s.plan === 'basic').length || 0;
           const proCount = subs?.filter(s => s.plan === 'pro').length || 0;
-
-          // Calculate estimated revenue (Basic = ₹99/month, Pro = ₹199/month)
-          const estimatedRevenue = (basicCount * 99) + (proCount * 199);
+          const estimatedRevenue = (basicCount * PLAN_LIMITS.basic.monthlyPrice) + (proCount * PLAN_LIMITS.pro.monthlyPrice);
 
           return {
-            ...school,
-            totalStudents: totalStudents || 0,
-            basicUsers: basicCount,
-            proUsers: proCount,
-            estimatedRevenue
+            ...school, type: 'school', totalStudents: totalStudents || 0,
+            basicUsers: basicCount, proUsers: proCount, starterUsers: 0, estimatedRevenue
+          };
+        }));
+
+        // Get coaching center stats
+        const { data: coachings } = await admin.from('coaching_centers').select('id, name, coaching_id, district, state');
+        const coachingStats = await Promise.all((coachings || []).map(async (cc) => {
+          const { count: totalStudents } = await admin
+            .from('students').select('id', { count: 'exact', head: true })
+            .eq('coaching_center_id', cc.id).eq('is_approved', true);
+
+          const { data: subs } = await admin
+            .from('subscriptions').select('plan, students!inner(coaching_center_id)')
+            .eq('students.coaching_center_id', cc.id);
+
+          const starterCount = subs?.filter(s => s.plan === 'starter').length || 0;
+          const basicCount = subs?.filter(s => s.plan === 'basic').length || 0;
+          const proCount = subs?.filter(s => s.plan === 'pro').length || 0;
+          const estimatedRevenue = (starterCount * PLAN_LIMITS.starter.monthlyPrice) +
+            (basicCount * PLAN_LIMITS.basic.monthlyPrice) + (proCount * PLAN_LIMITS.pro.monthlyPrice);
+
+          return {
+            ...cc, type: 'coaching', totalStudents: totalStudents || 0,
+            starterUsers: starterCount, basicUsers: basicCount, proUsers: proCount, estimatedRevenue
           };
         }));
 
         return new Response(
-          JSON.stringify({ success: true, schools: schoolStats }),
+          JSON.stringify({ success: true, schools: schoolStats, coachingCenters: coachingStats }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       // =============== SYSTEM ACTIONS ===============
       case "check_expiry": {
-        // This is called by a cron job to expire subscriptions
         const { data: expiredSubs, error: expiredError } = await admin
-          .from('subscriptions')
-          .select('id, student_id')
-          .eq('plan', 'pro')
-          .lt('end_date', new Date().toISOString());
+          .from('subscriptions').select('id, student_id')
+          .eq('plan', 'pro').lt('end_date', new Date().toISOString());
 
         if (expiredError) {
           console.error("Expiry check error:", expiredError);
@@ -611,17 +733,17 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         if (expiredSubs && expiredSubs.length > 0) {
-          const { error: updateError } = await admin
-            .from('subscriptions')
-            .update({
-              plan: 'basic',
-              end_date: null,
-              is_active: true
-            })
-            .in('id', expiredSubs.map(s => s.id));
+          // Determine correct downgrade plan per student
+          for (const sub of expiredSubs) {
+            const { data: student } = await admin
+              .from('students').select('student_type')
+              .eq('id', sub.student_id).maybeSingle();
 
-          if (updateError) {
-            console.error("Expiry update error:", updateError);
+            const downgradePlan = student?.student_type === 'coaching_student' ? 'starter' : 'basic';
+
+            await admin.from('subscriptions')
+              .update({ plan: downgradePlan, end_date: null, is_active: true })
+              .eq('id', sub.id);
           }
 
           console.log(`Expired ${expiredSubs.length} Pro subscriptions`);
