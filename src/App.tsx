@@ -21,6 +21,7 @@ import ResetPassword from "./pages/ResetPassword";
 import SchoolsDirectory from "./pages/SchoolsDirectory";
 import StudentProfile from "./pages/StudentProfile";
 import StudyPage from "./pages/StudyPage";
+import CoachingLogin from "./pages/CoachingLogin";
 import NotFound from "./pages/NotFound";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import GlobalErrorHandlers from "@/components/GlobalErrorHandlers";
@@ -45,6 +46,7 @@ const App = () => (
                   <Route path="/schools" element={<SchoolsDirectory />} />
                   <Route path="/school-login" element={<SchoolLogin />} />
                   <Route path="/admin-login" element={<AdminLogin />} />
+                  <Route path="/coaching-login" element={<CoachingLogin />} />
                   <Route path="/dashboard" element={<StudentDashboard />} />
                   <Route path="/progress" element={<StudentProgress />} />
                   <Route path="/profile" element={<StudentProfile />} />

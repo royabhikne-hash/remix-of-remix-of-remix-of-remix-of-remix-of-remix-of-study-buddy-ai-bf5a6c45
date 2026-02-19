@@ -20,6 +20,7 @@ import {
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
+import DailyUsageWidget from "@/components/DailyUsageWidget";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import { useToast } from "@/hooks/use-toast";
@@ -509,8 +510,9 @@ const StudentDashboard = () => {
           </div>
         </div>
 
-        {/* Subscription Card - Show plan status */}
-        <div className="mb-6">
+        {/* Daily Usage & Subscription */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <DailyUsageWidget studentId={studentId} />
           <SubscriptionCard studentId={studentId} onRefresh={loadStudentData} />
         </div>
 
