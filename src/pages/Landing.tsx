@@ -90,6 +90,10 @@ const Landing = () => {
               <Users className="w-5 h-5" />
               {t('auth.schoolLogin')}
             </Button>
+            <Button variant="hero-outline" size="xl" onClick={() => navigate("/coaching-login")}>
+              <GraduationCap className="w-5 h-5" />
+              {language === 'en' ? 'Coaching Login' : 'Coaching Login'}
+            </Button>
           </div>
         </div>
       </section>
