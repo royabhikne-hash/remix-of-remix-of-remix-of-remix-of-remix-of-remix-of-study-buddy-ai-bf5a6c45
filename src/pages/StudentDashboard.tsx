@@ -16,13 +16,15 @@ import {
   Sun,
   Trophy,
   Sparkles,
+  Brain,
+  ClipboardList,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import DailyUsageWidget from "@/components/DailyUsageWidget";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import LanguageToggle from "@/components/LanguageToggle";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -433,7 +435,7 @@ const StudentDashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-3">
-              <LanguageToggle />
+              <ThemeToggle />
               <ThemeToggle />
               <Button 
                 variant="ghost" 
@@ -478,17 +480,17 @@ const StudentDashboard = () => {
             <div className="relative z-10">
               <div className="flex items-center justify-center gap-2 mb-3">
                 <Sparkles className="w-5 h-5 text-primary animate-pulse-slow" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  {language === 'en' ? 'Daily Motivation' : 'Aaj Ki Motivation'}
+               <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  Daily Motivation
                 </span>
                 <Sparkles className="w-5 h-5 text-accent animate-pulse-slow" style={{ animationDelay: '1s' }} />
               </div>
               
               <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2">
-                {language === 'en' ? `Hello, ${userName}!` : `Namaste, ${userName}!`} 👋
+                Hello, {userName}! 👋
               </h1>
               
-              <MotivationalQuote language={language} studied={todayStats.studied} />
+              <MotivationalQuote studied={todayStats.studied} />
               
               <div className="flex flex-wrap justify-center gap-3 mt-5">
                 <Button 
@@ -499,11 +501,19 @@ const StudentDashboard = () => {
                   onTouchStart={handleStartStudy}
                 >
                   <Play className="w-5 h-5" />
-                  {language === 'en' ? 'Start Studying' : 'Padhai Shuru Karo'}
+                  Start Studying
+                </Button>
+                <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale" onClick={() => navigate("/mcq-practice")}>
+                  <Brain className="w-5 h-5" />
+                  Practice MCQ
+                </Button>
+                <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale" onClick={() => navigate("/weekly-test")}>
+                  <ClipboardList className="w-5 h-5" />
+                  Weekly Test
                 </Button>
                 <Button variant="outline" size="lg" className="text-sm sm:text-base hover-scale" onClick={() => navigate("/progress")}>
                   <BarChart3 className="w-5 h-5" />
-                  {t('nav.progress')}
+                  Progress
                 </Button>
               </div>
             </div>
@@ -690,7 +700,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
 
 StatCard.displayName = "StatCard";
 
-const QUOTES_EN = [
+const QUOTES = [
   "Every expert was once a beginner. Keep going! 🚀",
   "Small daily progress leads to big results! 📈",
   "Your future self will thank you for studying today! 💪",
@@ -701,24 +711,11 @@ const QUOTES_EN = [
   "The more you learn, the more you earn! 💡",
 ];
 
-const QUOTES_HI = [
-  "Har expert pehle beginner tha. Mehnat karte raho! 🚀",
-  "Roz ki chhoti mehnat bade result laati hai! 📈",
-  "Kal ka tum aaj ke liye thank karega! 💪",
-  "Champions tab padhte hain jab koi nahi dekhta! 🏆",
-  "Knowledge wo cheez hai jo koi cheen nahi sakta! 🧠",
-  "Aaj ki mehnat, kal ki safalta! ⭐",
-  "Curious raho. Padhai ka bhook rakho! 🔥",
-  "Jitna sikhoge, utna badhoge! 💡",
-];
-
-const MotivationalQuote = ({ language, studied }: { language: string; studied: boolean }) => {
+const MotivationalQuote = ({ studied }: { studied: boolean }) => {
   const quote = React.useMemo(() => {
-    const quotes = language === 'en' ? QUOTES_EN : QUOTES_HI;
-    // Pick a quote based on the day so it changes daily
-    const dayIndex = new Date().getDate() % quotes.length;
-    return quotes[dayIndex];
-  }, [language]);
+    const dayIndex = new Date().getDate() % QUOTES.length;
+    return QUOTES[dayIndex];
+  }, []);
 
   return (
     <p className="text-sm sm:text-base text-muted-foreground italic max-w-lg mx-auto leading-relaxed">

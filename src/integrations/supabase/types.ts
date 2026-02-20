@@ -319,6 +319,65 @@ export type Database = {
         }
         Relationships: []
       }
+      mcq_attempts: {
+        Row: {
+          accuracy_percentage: number
+          answers: Json
+          board: string
+          class: string
+          correct_count: number
+          created_at: string
+          id: string
+          performance_remark: string | null
+          questions: Json
+          student_id: string
+          subject: string
+          time_taken_seconds: number
+          total_questions: number
+          wrong_count: number
+        }
+        Insert: {
+          accuracy_percentage?: number
+          answers?: Json
+          board: string
+          class: string
+          correct_count?: number
+          created_at?: string
+          id?: string
+          performance_remark?: string | null
+          questions?: Json
+          student_id: string
+          subject: string
+          time_taken_seconds?: number
+          total_questions: number
+          wrong_count?: number
+        }
+        Update: {
+          accuracy_percentage?: number
+          answers?: Json
+          board?: string
+          class?: string
+          correct_count?: number
+          created_at?: string
+          id?: string
+          performance_remark?: string | null
+          questions?: Json
+          student_id?: string
+          subject?: string
+          time_taken_seconds?: number
+          total_questions?: number
+          wrong_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_reports: {
         Row: {
           created_at: string
@@ -641,6 +700,7 @@ export type Database = {
           rejection_reason: string | null
           school_id: string | null
           state: string
+          stream: string | null
           student_type: Database["public"]["Enums"]["student_type"]
           updated_at: string
           user_id: string
@@ -664,6 +724,7 @@ export type Database = {
           rejection_reason?: string | null
           school_id?: string | null
           state: string
+          stream?: string | null
           student_type?: Database["public"]["Enums"]["student_type"]
           updated_at?: string
           user_id: string
@@ -687,6 +748,7 @@ export type Database = {
           rejection_reason?: string | null
           school_id?: string | null
           state?: string
+          stream?: string | null
           student_type?: Database["public"]["Enums"]["student_type"]
           updated_at?: string
           user_id?: string
@@ -868,6 +930,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "upgrade_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_tests: {
+        Row: {
+          accuracy_percentage: number
+          answers: Json
+          correct_count: number
+          created_at: string
+          id: string
+          improvement_suggestion: string | null
+          questions: Json
+          strong_subjects: string[] | null
+          student_id: string
+          subjects_tested: string[]
+          time_taken_seconds: number
+          total_questions: number
+          weak_subjects: string[] | null
+          week_end: string
+          week_start: string
+          wrong_count: number
+        }
+        Insert: {
+          accuracy_percentage?: number
+          answers?: Json
+          correct_count?: number
+          created_at?: string
+          id?: string
+          improvement_suggestion?: string | null
+          questions?: Json
+          strong_subjects?: string[] | null
+          student_id: string
+          subjects_tested?: string[]
+          time_taken_seconds?: number
+          total_questions: number
+          weak_subjects?: string[] | null
+          week_end: string
+          week_start: string
+          wrong_count?: number
+        }
+        Update: {
+          accuracy_percentage?: number
+          answers?: Json
+          correct_count?: number
+          created_at?: string
+          id?: string
+          improvement_suggestion?: string | null
+          questions?: Json
+          strong_subjects?: string[] | null
+          student_id?: string
+          subjects_tested?: string[]
+          time_taken_seconds?: number
+          total_questions?: number
+          weak_subjects?: string[] | null
+          week_end?: string
+          week_start?: string
+          wrong_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_tests_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
