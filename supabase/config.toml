@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.generate-mcq]
 verify_jwt = false
+
+[functions.parent-dashboard]
+verify_jwt = false

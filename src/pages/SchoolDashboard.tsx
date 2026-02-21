@@ -26,6 +26,7 @@ import {
   List,
   Key,
   Crown,
+  BarChart3,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +55,7 @@ import StudentReportModal from "@/components/StudentReportModal";
 import StudentAnalyticsCard from "@/components/StudentAnalyticsCard";
 import UpgradeRequestsTab from "@/components/UpgradeRequestsTab";
 import ExpiringSubscriptionsWidget from "@/components/ExpiringSubscriptionsWidget";
+import SchoolAnalytics from "@/components/SchoolAnalytics";
 import StudentSubscriptionManagement from "@/components/StudentSubscriptionManagement";
 import { useToast } from "@/hooks/use-toast";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -846,7 +848,7 @@ const SchoolDashboard = () => {
 
         {/* Tabs for Pending vs Approved vs Subscriptions vs Rankings */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="approved" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <UserCheck className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">{t("student.approved")}</span> ({approvedStudents.length})
@@ -868,6 +870,10 @@ const SchoolDashboard = () => {
             <TabsTrigger value="rankings" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Rankings</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1373,6 +1379,14 @@ const SchoolDashboard = () => {
                 showTop={20}
               />
             )}
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="mt-4 sm:mt-6">
+            <SchoolAnalytics 
+              schoolUuid={schoolUuid || ""} 
+              sessionToken={localStorage.getItem("sessionToken") || ""} 
+            />
           </TabsContent>
         </Tabs>
       </main>

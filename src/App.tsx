@@ -24,6 +24,7 @@ import StudyPage from "./pages/StudyPage";
 import CoachingLogin from "./pages/CoachingLogin";
 import McqPractice from "./pages/McqPractice";
 import WeeklyTest from "./pages/WeeklyTest";
+import ParentDashboard from "./pages/ParentDashboard";
 import NotFound from "./pages/NotFound";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import GlobalErrorHandlers from "@/components/GlobalErrorHandlers";
@@ -57,6 +58,7 @@ const App = () => (
                   <Route path="/weekly-test" element={<WeeklyTest />} />
                   <Route path="/school-dashboard" element={<SchoolDashboard />} />
                   <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                  <Route path="/parent-view" element={<ParentDashboard />} />
                   <Route path="/terms" element={<TermsConditions />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />

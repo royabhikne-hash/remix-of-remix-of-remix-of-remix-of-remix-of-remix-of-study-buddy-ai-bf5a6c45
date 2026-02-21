@@ -378,6 +378,41 @@ export type Database = {
           },
         ]
       }
+      parent_access_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_accessed_at: string | null
+          student_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_accessed_at?: string | null
+          student_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_accessed_at?: string | null
+          student_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_access_tokens_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_reports: {
         Row: {
           created_at: string

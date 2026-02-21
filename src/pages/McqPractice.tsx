@@ -237,7 +237,7 @@ const McqPractice = () => {
             </Button>
             <div>
               <h1 className="font-bold text-lg">Practice MCQ</h1>
-              <p className="text-xs text-muted-foreground">{studentBoard} · Class {studentClass}</p>
+              <p className="text-xs text-muted-foreground">{studentBoard} · {studentClass}</p>
             </div>
           </div>
         </header>
@@ -302,7 +302,7 @@ const McqPractice = () => {
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
           <h2 className="text-lg font-bold">Generating Questions...</h2>
           <p className="text-sm text-muted-foreground">
-            Creating {numQuestions} {selectedSubject} MCQs for {studentBoard} Class {studentClass}
+            Creating {numQuestions} {selectedSubject} MCQs for {studentBoard} {studentClass}
           </p>
         </div>
       </div>
@@ -444,7 +444,7 @@ const McqPractice = () => {
             <div>
               <Trophy className="w-16 h-16 mx-auto text-primary mb-4" />
               <h2 className="text-2xl font-bold">Practice Complete!</h2>
-              <p className="text-sm text-muted-foreground mt-1">{selectedSubject} · {studentBoard} Class {studentClass}</p>
+              <p className="text-sm text-muted-foreground mt-1">{selectedSubject} · {studentBoard} {studentClass}</p>
             </div>
 
             {/* Score circle */}
