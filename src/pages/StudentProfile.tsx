@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, Phone, Save, Loader2, Key, Camera } from "lucide-react";
+import { ArrowLeft, User, Phone, Save, Loader2, Key, Camera, Share2, Copy, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,9 @@ const StudentProfile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [schoolName, setSchoolName] = useState("");
+  const [parentLink, setParentLink] = useState("");
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   
   const [formData, setFormData] = useState({
     phone: "",
@@ -74,6 +77,20 @@ const StudentProfile = () => {
           parent_whatsapp: student.parent_whatsapp || "",
         });
         setSchoolName((student.schools as any)?.name || "Not assigned");
+        
+        // Load existing parent access token
+        const { data: tokenData } = await supabase
+          .from("parent_access_tokens")
+          .select("token")
+          .eq("student_id", student.id)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        
+        if (tokenData) {
+          const baseUrl = window.location.origin;
+          setParentLink(`${baseUrl}/parent-view?token=${tokenData.token}`);
+        }
       }
     } catch (error) {
       console.error("Error loading student data:", error);
@@ -306,6 +323,67 @@ const StudentProfile = () => {
               )}
             </Button>
           </div>
+        </div>
+
+        {/* Share with Parents */}
+        <div className="edu-card p-6 mb-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Share2 className="w-4 h-4 text-primary" />
+            </span>
+            Share with Parents
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Generate a read-only link for your parents to track your study progress. They won't see your chat conversations.
+          </p>
+          
+          {parentLink ? (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input value={parentLink} readOnly className="text-xs" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    navigator.clipboard.writeText(parentLink);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                >
+                  {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Share this link with your parents via WhatsApp or SMS.</p>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (!studentData) return;
+                setIsGeneratingLink(true);
+                try {
+                  const { data: token, error } = await supabase
+                    .from("parent_access_tokens")
+                    .insert({ student_id: studentData.id })
+                    .select("token")
+                    .single();
+                  
+                  if (error) throw error;
+                  const baseUrl = window.location.origin;
+                  setParentLink(`${baseUrl}/parent-view?token=${token.token}`);
+                } catch (err) {
+                  console.error("Error generating link:", err);
+                  toast({ title: "Error", description: "Failed to generate link.", variant: "destructive" });
+                } finally {
+                  setIsGeneratingLink(false);
+                }
+              }}
+              disabled={isGeneratingLink}
+            >
+              {isGeneratingLink ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Share2 className="w-4 h-4 mr-2" />}
+              Generate Parent Link
+            </Button>
+          )}
         </div>
 
         {/* Password Change */}
