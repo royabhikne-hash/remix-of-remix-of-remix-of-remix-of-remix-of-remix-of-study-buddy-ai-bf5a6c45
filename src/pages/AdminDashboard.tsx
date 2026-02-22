@@ -1181,7 +1181,8 @@ const AdminDashboard = () => {
                   `📚 Class: ${student.class}\n` +
                   `🏫 School: ${student.school_name}\n\n` +
                   `📊 Aapke bachche ki weekly progress report ready hai!\n\n` +
-                  `📱 Full report dekhne ke liye Study Buddy AI app use karein.\n\n` +
+                  `📱 Full report dekhne ke liye neeche link par click karein:\n` +
+                  `🔗 https://studybuddyaiapp.lovable.app/parent-view?student=${student.id}\n\n` +
                   `_Report generated on ${new Date().toLocaleDateString('en-IN')}_`
                 );
                 const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${reportMessage}`;

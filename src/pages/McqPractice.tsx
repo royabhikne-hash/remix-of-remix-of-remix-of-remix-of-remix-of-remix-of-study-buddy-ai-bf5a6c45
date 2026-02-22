@@ -90,7 +90,9 @@ const McqPractice = () => {
       setStudentBoard(student.board);
       setStudentClass(student.class);
 
-      const subjects = getSubjects(student.board as BoardType, student.class);
+      // Strip "Class " prefix since syllabusData uses plain numbers like "10"
+      const classNum = student.class.replace(/^Class\s+/i, "");
+      const subjects = getSubjects(student.board as BoardType, classNum);
       setAvailableSubjects(subjects);
       if (subjects.length > 0) setSelectedSubject(subjects[0]);
     } catch (error) {

@@ -445,8 +445,42 @@ serve(async (req) => {
       
       // Send WhatsApp if requested
       if (body.sendWhatsApp && !body.previewOnly) {
+        // Generate or fetch parent access token for parent dashboard link
+        let parentLink = "";
+        try {
+          const { data: existingToken } = await supabase
+            .from("parent_access_tokens")
+            .select("token")
+            .eq("student_id", student.id)
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (existingToken?.token) {
+            parentLink = `${supabaseUrl.replace('.supabase.co', '').includes('lakhyznbqudncuhpmvzx') ? 'https://studybuddyaiapp.lovable.app' : supabaseUrl}/parent-view?token=${existingToken.token}`;
+          } else {
+            // Create a new parent access token
+            const { data: newToken } = await supabase
+              .from("parent_access_tokens")
+              .insert({ student_id: student.id })
+              .select("token")
+              .single();
+            if (newToken?.token) {
+              parentLink = `https://studybuddyaiapp.lovable.app/parent-view?token=${newToken.token}`;
+            }
+          }
+        } catch (e) {
+          console.error("Error generating parent link:", e);
+        }
+
         const language = body.language || "hi";
-        const message = generateWhatsAppMessage(report, language);
+        let message = generateWhatsAppMessage(report, language);
+        
+        // Append parent dashboard link
+        if (parentLink) {
+          message += `\n\n🔗 *${language === "hi" ? "पूरी रिपोर्ट देखें" : "View Full Report"}:*\n${parentLink}`;
+        }
+        
         const sent = await sendWhatsAppMessage(student.parent_whatsapp, message);
         reports[reports.length - 1].sent = sent;
         console.log(`WhatsApp for ${student.full_name}: ${sent ? 'sent' : 'failed'}`);
