@@ -338,6 +338,74 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Handle get_parent_token action (for admin WhatsApp links)
+    if (action === 'get_parent_token') {
+      if (!session_token) {
+        return new Response(
+          JSON.stringify({ error: 'Session token required' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const validation = await validateSessionToken(supabaseAdmin, session_token, 'admin');
+      if (!validation.valid) {
+        // Also allow school users
+        const schoolValidation = await validateSessionToken(supabaseAdmin, session_token, 'school');
+        if (!schoolValidation.valid) {
+          return new Response(
+            JSON.stringify({ error: 'Unauthorized' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      const { studentId } = await req.json().catch(() => ({}));
+      const targetStudentId = studentId || student_id;
+      
+      if (!targetStudentId) {
+        return new Response(
+          JSON.stringify({ error: 'Student ID required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check for existing active token
+      const { data: existingToken } = await supabaseAdmin
+        .from('parent_access_tokens')
+        .select('token')
+        .eq('student_id', targetStudentId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingToken?.token) {
+        return new Response(
+          JSON.stringify({ token: existingToken.token }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Create new token
+      const { data: newToken, error: tokenError } = await supabaseAdmin
+        .from('parent_access_tokens')
+        .insert({ student_id: targetStudentId })
+        .select('token')
+        .single();
+
+      if (tokenError) {
+        console.error('Error creating parent token:', tokenError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create token' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ token: newToken.token }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Validate session token for list operations
     if (!session_token) {
       return new Response(
