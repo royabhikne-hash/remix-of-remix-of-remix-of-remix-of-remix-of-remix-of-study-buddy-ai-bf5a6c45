@@ -90,27 +90,44 @@
  // Bihar Board (BSEB) Syllabus - Based on SCERT Bihar
  // Note: Bihar Board follows NCERT but has some variations in chapter order and naming
  const BIHAR_BOARD_SYLLABUS: Record<string, Record<string, string[]>> = {
-   "6": {
-     ...CBSE_SYLLABUS["6"],
-   },
-   "7": {
-     ...CBSE_SYLLABUS["7"],
-   },
-   "8": {
-     ...CBSE_SYLLABUS["8"],
-   },
+  "6": {
+    ...CBSE_SYLLABUS["6"],
+    "History": CBSE_SYLLABUS["6"]["History"],
+    "Political Science": CBSE_SYLLABUS["6"]["Political Science"],
+    "Geography": CBSE_SYLLABUS["6"]["Geography"],
+  },
+  "7": {
+    ...CBSE_SYLLABUS["7"],
+    "History": CBSE_SYLLABUS["7"]["History"],
+    "Political Science": CBSE_SYLLABUS["7"]["Political Science"],
+    "Geography": CBSE_SYLLABUS["7"]["Geography"],
+  },
+  "8": {
+    ...CBSE_SYLLABUS["8"],
+    "History": CBSE_SYLLABUS["8"]["History"],
+    "Political Science": CBSE_SYLLABUS["8"]["Political Science"],
+    "Geography": CBSE_SYLLABUS["8"]["Geography"],
+  },
    "9": {
      "Math": ["संख्या पद्धति (Number Systems)", "बहुपद (Polynomials)", "निर्देशांक ज्यामिति (Coordinate Geometry)", "दो चरों वाले रैखिक समीकरण (Linear Equations in Two Variables)", "यूक्लिड की ज्यामिति का परिचय (Introduction to Euclid's Geometry)", "रेखाएँ और कोण (Lines and Angles)", "त्रिभुज (Triangles)", "चतुर्भुज (Quadrilaterals)", "समांतर चतुर्भुजों और त्रिभुजों के क्षेत्रफल (Areas of Parallelograms and Triangles)", "वृत्त (Circles)", "रचनाएँ (Constructions)", "हीरोन का सूत्र (Heron's Formula)", "पृष्ठीय क्षेत्रफल और आयतन (Surface Areas and Volumes)", "सांख्यिकी (Statistics)", "प्रायिकता (Probability)"],
      "Science": ["हमारे आस-पास के पदार्थ (Matter in Our Surroundings)", "क्या हमारे आस-पास के पदार्थ शुद्ध हैं (Is Matter Around Us Pure?)", "परमाणु एवं अणु (Atoms and Molecules)", "परमाणु की संरचना (Structure of the Atom)", "जीवन की मौलिक इकाई (The Fundamental Unit of Life)", "ऊतक (Tissues)", "जीवों में विविधता (Diversity in Living Organisms)", "गति (Motion)", "बल तथा गति के नियम (Force and Laws of Motion)", "गुरुत्वाकर्षण (Gravitation)", "कार्य तथा ऊर्जा (Work and Energy)", "ध्वनि (Sound)", "हम बीमार क्यों होते हैं (Why Do We Fall Ill?)", "प्राकृतिक संसाधन (Natural Resources)", "खाद्य संसाधनों में सुधार (Improvement in Food Resources)"],
-     "Social Science": CBSE_SYLLABUS["9"]["Social Science"],
-     "English": CBSE_SYLLABUS["9"]["English"],
+    "Social Science": CBSE_SYLLABUS["9"]["Social Science"],
+    "History": CBSE_SYLLABUS["9"]["History"],
+    "Political Science": CBSE_SYLLABUS["9"]["Political Science"],
+    "Economics": CBSE_SYLLABUS["9"]["Economics"],
+    "Geography": CBSE_SYLLABUS["9"]["Geography"],
+    "English": CBSE_SYLLABUS["9"]["English"],
      "Hindi": ["दो बैलों की कथा", "ल्हासा की ओर", "उपभोक्तावाद की संस्कृति", "साँवले सपनों की याद", "नाना साहब की पुत्री देवी मैना को भस्म कर दिया गया", "प्रेमचंद के फटे जूते", "मेरे बचपन के दिन", "एक कुत्ता और एक मैना", "सबद", "वाख", "रैदास के पद"],
    },
    "10": {
      "Math": ["वास्तविक संख्याएँ (Real Numbers)", "बहुपद (Polynomials)", "दो चरों वाले रैखिक समीकरण युग्म (Pair of Linear Equations)", "द्विघात समीकरण (Quadratic Equations)", "समांतर श्रेढ़ी (Arithmetic Progressions)", "त्रिभुज (Triangles)", "निर्देशांक ज्यामिति (Coordinate Geometry)", "त्रिकोणमिति का परिचय (Introduction to Trigonometry)", "त्रिकोणमिति के कुछ अनुप्रयोग (Applications of Trigonometry)", "वृत्त (Circles)", "रचनाएँ (Constructions)", "वृत्तों से संबंधित क्षेत्रफल (Areas Related to Circles)", "पृष्ठीय क्षेत्रफल और आयतन (Surface Areas and Volumes)", "सांख्यिकी (Statistics)", "प्रायिकता (Probability)"],
      "Science": ["रासायनिक अभिक्रियाएँ एवं समीकरण (Chemical Reactions and Equations)", "अम्ल, क्षारक एवं लवण (Acids, Bases and Salts)", "धातु एवं अधातु (Metals and Non-metals)", "कार्बन एवं उसके यौगिक (Carbon and its Compounds)", "तत्वों का आवर्त वर्गीकरण (Periodic Classification of Elements)", "जैव प्रक्रम (Life Processes)", "नियंत्रण एवं समन्वय (Control and Coordination)", "जीव जनन कैसे करते हैं (How do Organisms Reproduce?)", "आनुवंशिकता एवं जैव विकास (Heredity and Evolution)", "प्रकाश - परावर्तन तथा अपवर्तन (Light – Reflection and Refraction)", "मानव नेत्र तथा रंगबिरंगा संसार (Human Eye and Colourful World)", "विद्युत (Electricity)", "विद्युत धारा के चुंबकीय प्रभाव (Magnetic Effects of Electric Current)", "ऊर्जा के स्रोत (Sources of Energy)", "हमारा पर्यावरण (Our Environment)", "प्राकृतिक संसाधनों का प्रबंधन (Management of Natural Resources)"],
-     "Social Science": CBSE_SYLLABUS["10"]["Social Science"],
-     "English": CBSE_SYLLABUS["10"]["English"],
+    "Social Science": CBSE_SYLLABUS["10"]["Social Science"],
+    "History": CBSE_SYLLABUS["10"]["History"],
+    "Political Science": CBSE_SYLLABUS["10"]["Political Science"],
+    "Economics": CBSE_SYLLABUS["10"]["Economics"],
+    "Geography": CBSE_SYLLABUS["10"]["Geography"],
+    "English": CBSE_SYLLABUS["10"]["English"],
      "Hindi": CBSE_SYLLABUS["10"]["Hindi"],
    },
    "11": {

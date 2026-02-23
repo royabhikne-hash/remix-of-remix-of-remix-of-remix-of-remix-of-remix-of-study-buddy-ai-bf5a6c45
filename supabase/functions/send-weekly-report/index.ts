@@ -181,22 +181,27 @@ const generateWhatsAppMessage = (report: DetailedReport, language: ReportLanguag
   const mins = report.totalMinutes % 60;
   const timeFormatted = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
-  let message = `🎓 *${report.studentName} - ${t.weeklyReport}*
+  const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  let message = `🎓 *Study Buddy AI*
 ━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *${report.studentName} - ${t.weeklyReport}*
+
 🏫 ${report.schoolName}
 📚 ${report.studentClass}
+📅 ${date}
 
 🏆 *${t.grade}: ${report.grade}* (${report.gradeLabel})
 ${trendEmoji} ${t.trend}: ${trendText}
 
 📊 *${t.thisWeek}:*
-┌─────────────────────────
-│ 📖 ${t.sessions}: *${report.totalSessions}*
-│ ⏱️ ${t.studyTime}: *${timeFormatted}*
-│ 🎯 ${t.quizAccuracy}: *${report.avgAccuracy}%*
-│ 📅 ${t.daysStudied}: *${report.daysStudied}/7*
-│ 🔥 ${t.streak}: *${report.currentStreak} days*
-└─────────────────────────`;
+╔══════════════════════════
+║ 📖 ${t.sessions}: *${report.totalSessions}*
+║ ⏱️ ${t.studyTime}: *${timeFormatted}*
+║ 🎯 ${t.quizAccuracy}: *${report.avgAccuracy}%*
+║ 📅 ${t.daysStudied}: *${report.daysStudied}/7*
+║ 🔥 ${t.streak}: *${report.currentStreak} days*
+╚══════════════════════════`;
 
   if (report.strongAreas.length > 0) {
     message += `\n\n✅ *${t.strong}:*\n${report.strongAreas.slice(0, 3).map(a => `   • ${a}`).join('\n')}`;
@@ -213,7 +218,7 @@ ${trendEmoji} ${t.trend}: ${trendText}
   // Subject-wise summary
   if (report.subjectsStudied.length > 0) {
     const subjectEmojis: Record<string, string> = {
-      "Mathematics": "🔢",
+      "Mathematics": "🔢", "Math": "🔢",
       "Science": "🔬",
       "Hindi": "📕",
       "English": "📗",
@@ -221,9 +226,13 @@ ${trendEmoji} ${t.trend}: ${trendText}
       "Physics": "⚛️",
       "Chemistry": "🧪",
       "Biology": "🧬",
+      "History": "🏛️",
+      "Political Science": "🏛️",
+      "Geography": "🗺️",
+      "Economics": "💰",
     };
     
-    const subjectList = report.subjectsStudied.slice(0, 4).map(s => {
+    const subjectList = report.subjectsStudied.slice(0, 5).map(s => {
       const emoji = subjectEmojis[s] || "📚";
       return `${emoji} ${s}`;
     }).join(" | ");
@@ -233,7 +242,8 @@ ${trendEmoji} ${t.trend}: ${trendText}
 
   message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━
 📱 *${t.signature}*
-🌟 ${language === "hi" ? "पढ़ाई में मदद करने वाला AI साथी" : "Your AI Study Companion"}`;
+🌟 ${language === "hi" ? "AI-Powered Study Partner" : "Your AI Study Companion"}
+🌐 studybuddyaiapp.lovable.app`;
 
   return message;
 };
