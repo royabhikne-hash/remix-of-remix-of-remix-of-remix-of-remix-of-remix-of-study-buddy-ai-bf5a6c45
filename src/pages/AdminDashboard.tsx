@@ -275,6 +275,32 @@ const AdminDashboard = () => {
           setRankings(data.rankings);
         }
       }
+
+      // Load coaching centers
+      try {
+        const { data: ccData, error: ccError } = await supabase.functions.invoke("manage-coaching", {
+          body: {
+            action: "list_coaching_centers",
+            adminCredentials: { sessionToken },
+          },
+        });
+        if (!ccError && ccData?.coachingCenters) {
+          setCoachingCenters(ccData.coachingCenters.map((cc: any) => ({
+            id: cc.id,
+            coaching_id: cc.coaching_id,
+            name: cc.name,
+            district: cc.district,
+            state: cc.state,
+            studentCount: cc.studentCount || 0,
+            is_banned: cc.is_banned || false,
+            fee_paid: cc.fee_paid !== false,
+            email: cc.email,
+            contact_whatsapp: cc.contact_whatsapp,
+          })));
+        }
+      } catch (ccErr) {
+        console.error("Error loading coaching centers:", ccErr);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -737,6 +763,12 @@ const AdminDashboard = () => {
       school.school_id.toLowerCase().includes(debouncedSearch.toLowerCase())
     ), [schools, debouncedSearch]);
 
+  const filteredCoachingCenters = useMemo(() => 
+    coachingCenters.filter((cc) =>
+      cc.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      cc.coaching_id.toLowerCase().includes(debouncedSearch.toLowerCase())
+    ), [coachingCenters, debouncedSearch]);
+
   const filteredStudents = useMemo(() => 
     students.filter(
       (student) =>
@@ -747,10 +779,11 @@ const AdminDashboard = () => {
   const stats = useMemo(() => ({
     totalStudents: students.length,
     totalSchools: schools.length,
+    totalCoaching: coachingCenters.length,
     activeSchools: schools.filter((s) => s.studentCount > 0 && !s.is_banned && s.fee_paid).length,
     bannedSchools: schools.filter((s) => s.is_banned).length,
     unpaidSchools: schools.filter((s) => !s.fee_paid).length,
-  }), [schools, students]);
+  }), [schools, students, coachingCenters]);
 
   const handleSeedSchools = async () => {
     setSeedingSchools(true);
