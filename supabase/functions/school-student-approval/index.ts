@@ -89,8 +89,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const admin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate session token against database
-    const validation = await validateSessionToken(admin, body.sessionToken, 'school', body.schoolUuid);
+    // Validate session token against database (support both school and coaching)
+    let validation = await validateSessionToken(admin, body.sessionToken, 'school', body.schoolUuid);
+    if (!validation.valid) {
+      validation = await validateSessionToken(admin, body.sessionToken, 'coaching', body.schoolUuid);
+    }
     if (!validation.valid) {
       return new Response(
         JSON.stringify({ success: false, error: "Invalid or expired session" }),
@@ -98,33 +101,63 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify school exists and is not banned
-    const { data: school, error: schoolError } = await admin
-      .from("schools")
-      .select("id, name, school_id, is_banned, fee_paid")
-      .eq("id", body.schoolUuid)
-      .eq("school_id", body.schoolId)
-      .maybeSingle();
+    // Verify institution exists and is not banned (school or coaching)
+    let institutionName = "";
+    const isCoaching = validation.userType === 'coaching';
+    
+    if (isCoaching) {
+      const { data: cc, error: ccError } = await admin
+        .from("coaching_centers")
+        .select("id, name, coaching_id, is_banned, fee_paid")
+        .eq("id", body.schoolUuid)
+        .maybeSingle();
 
-    if (schoolError || !school) {
-      return new Response(
-        JSON.stringify({ success: false, error: "School validation failed" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      if (ccError || !cc) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Coaching center validation failed" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (cc.is_banned) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Coaching center is banned" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (cc.fee_paid === false) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Access suspended due to unpaid fees" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      institutionName = cc.name;
+    } else {
+      const { data: school, error: schoolError } = await admin
+        .from("schools")
+        .select("id, name, school_id, is_banned, fee_paid")
+        .eq("id", body.schoolUuid)
+        .eq("school_id", body.schoolId)
+        .maybeSingle();
 
-    if (school.is_banned) {
-      return new Response(
-        JSON.stringify({ success: false, error: "School is banned" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (school.fee_paid === false) {
-      return new Response(
-        JSON.stringify({ success: false, error: "School access suspended due to unpaid fees" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (schoolError || !school) {
+        return new Response(
+          JSON.stringify({ success: false, error: "School validation failed" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (school.is_banned) {
+        return new Response(
+          JSON.stringify({ success: false, error: "School is banned" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (school.fee_paid === false) {
+        return new Response(
+          JSON.stringify({ success: false, error: "School access suspended due to unpaid fees" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      institutionName = school.name;
     }
 
     // Handle bulk operations
@@ -133,7 +166,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       const { data: students, error: studentsError } = await admin
         .from("students")
-        .select("id, school_id")
+        .select("id, school_id, coaching_center_id")
         .in("id", studentIds);
 
       if (studentsError) {
@@ -144,10 +177,12 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const invalidStudents = students?.filter(s => s.school_id !== school.id) || [];
+      const invalidStudents = students?.filter(s => 
+        isCoaching ? s.coaching_center_id !== body.schoolUuid : s.school_id !== body.schoolUuid
+      ) || [];
       if (invalidStudents.length > 0) {
         return new Response(
-          JSON.stringify({ success: false, error: "Some students do not belong to this school" }),
+          JSON.stringify({ success: false, error: "Some students do not belong to this institution" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -202,13 +237,17 @@ const handler = async (req: Request): Promise<Response> => {
     // Single student operations
     const { data: student, error: studentError } = await admin
       .from("students")
-      .select("id, school_id")
+      .select("id, school_id, coaching_center_id")
       .eq("id", body.studentId)
       .maybeSingle();
 
-    if (studentError || !student || student.school_id !== school.id) {
+    const belongsToInstitution = isCoaching 
+      ? student?.coaching_center_id === body.schoolUuid
+      : student?.school_id === body.schoolUuid;
+
+    if (studentError || !student || !belongsToInstitution) {
       return new Response(
-        JSON.stringify({ success: false, error: "Student not found for this school" }),
+        JSON.stringify({ success: false, error: "Student not found for this institution" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

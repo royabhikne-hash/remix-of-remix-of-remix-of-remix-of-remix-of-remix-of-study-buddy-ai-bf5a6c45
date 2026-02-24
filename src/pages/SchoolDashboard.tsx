@@ -146,12 +146,14 @@ const SchoolDashboard = () => {
   const [pendingUpgradeRequests, setPendingUpgradeRequests] = useState<any[]>([]);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
+  const isCoachingUser = localStorage.getItem("userType") === "coaching";
+
   useEffect(() => {
     const storedSchoolName = localStorage.getItem("schoolName");
     const storedSchoolId = localStorage.getItem("schoolId");
     
     if (!storedSchoolId) {
-      navigate("/school-login");
+      navigate(isCoachingUser ? "/coaching-login" : "/school-login");
       return;
     }
     
@@ -165,13 +167,39 @@ const SchoolDashboard = () => {
   const checkSchoolAccess = async () => {
     try {
       const storedSchoolId = localStorage.getItem("schoolId");
+      const storedSchoolUUID = localStorage.getItem("schoolUUID");
       
       if (!storedSchoolId) {
         setLoading(false);
         return;
       }
 
-      // Check if school is banned or fee not paid (via backend function)
+      if (isCoachingUser) {
+        // For coaching users, use the stored UUID directly and validate via session
+        const sessionToken = localStorage.getItem("schoolSessionToken") || localStorage.getItem("coachingSessionToken");
+        if (!sessionToken || !storedSchoolUUID) {
+          setLoading(false);
+          return;
+        }
+        // Validate session via manage-coaching
+        const { data, error } = await supabase.functions.invoke("manage-coaching", {
+          body: { action: "get_coaching_students", sessionToken, coachingData: { coachingUuid: storedSchoolUUID } },
+        });
+        if (error || data?.error) {
+          if (data?.error?.includes("expired") || data?.error?.includes("Invalid")) {
+            localStorage.clear();
+            navigate("/coaching-login");
+            return;
+          }
+          setLoading(false);
+          return;
+        }
+        setSchoolUuid(storedSchoolUUID);
+        loadStudents(storedSchoolUUID);
+        return;
+      }
+
+      // School user flow
       const { data, error } = await supabase.functions.invoke("get-schools-public", {
         body: { action: "by_school_id", school_id: storedSchoolId },
       });
@@ -190,11 +218,7 @@ const SchoolDashboard = () => {
       }
 
       if (school.is_banned) {
-        toast({
-          title: "Access Denied",
-          description: "Your school has been banned. Please contact admin.",
-          variant: "destructive",
-        });
+        toast({ title: "Access Denied", description: "Your school has been banned. Please contact admin.", variant: "destructive" });
         localStorage.clear();
         navigate("/school-login");
         return;
@@ -223,11 +247,11 @@ const SchoolDashboard = () => {
         return;
       }
 
-      // Use edge function to bypass RLS and get students for this school
-      const sessionToken = localStorage.getItem("schoolSessionToken");
+      const sessionToken = localStorage.getItem("schoolSessionToken") || localStorage.getItem("coachingSessionToken");
+      
       const { data, error } = await supabase.functions.invoke("get-students", {
         body: {
-          user_type: "school",
+          user_type: isCoachingUser ? "coaching" : "school",
           session_token: sessionToken,
           school_id: id,
         },

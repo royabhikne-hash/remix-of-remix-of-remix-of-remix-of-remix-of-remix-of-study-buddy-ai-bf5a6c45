@@ -590,6 +590,133 @@ const AdminDashboard = () => {
      }
    };
 
+  // ========== Coaching Center Handlers ==========
+  const handleAddCoaching = async () => {
+    if (!newCoaching.name.trim()) {
+      toast({ title: "Error", description: "Please enter coaching name", variant: "destructive" });
+      return;
+    }
+    setAddingCoaching(true);
+    try {
+      const sessionToken = localStorage.getItem("adminSessionToken");
+      const { data, error } = await supabase.functions.invoke("manage-coaching", {
+        body: {
+          action: "create_coaching_center",
+          adminCredentials: { sessionToken },
+          coachingData: {
+            name: newCoaching.name,
+            district: newCoaching.district || null,
+            state: newCoaching.state || null,
+            email: newCoaching.email || null,
+            contact_whatsapp: newCoaching.contact_whatsapp || null,
+          },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success) {
+        setGeneratedCoachingCredentials(data.credentials);
+        toast({ title: "Coaching Added!", description: `${newCoaching.name} has been added successfully.` });
+        loadData();
+      }
+    } catch (error) {
+      console.error("Error adding coaching:", error);
+      toast({ title: "Error", description: "Failed to add coaching center.", variant: "destructive" });
+    } finally {
+      setAddingCoaching(false);
+    }
+  };
+
+  const handleBanCoaching = async (coachingId: string, ban: boolean) => {
+    setActionLoading(coachingId);
+    try {
+      const sessionToken = localStorage.getItem("adminSessionToken");
+      const { data, error } = await supabase.functions.invoke("manage-coaching", {
+        body: {
+          action: "update_coaching_center",
+          adminCredentials: { sessionToken },
+          coachingData: { coachingId, updates: { is_banned: ban } },
+        },
+      });
+      if (error || data?.error) throw error || new Error(data.error);
+      setCoachingCenters(prev => prev.map(c => c.id === coachingId ? { ...c, is_banned: ban } : c));
+      toast({ title: ban ? "Coaching Banned" : "Coaching Unbanned" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update coaching.", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+      setConfirmDialog(null);
+    }
+  };
+
+  const handleToggleCoachingFee = async (coachingId: string, paid: boolean) => {
+    setActionLoading(coachingId);
+    try {
+      const sessionToken = localStorage.getItem("adminSessionToken");
+      const { data, error } = await supabase.functions.invoke("manage-coaching", {
+        body: {
+          action: "update_coaching_center",
+          adminCredentials: { sessionToken },
+          coachingData: { coachingId, updates: { fee_paid: paid } },
+        },
+      });
+      if (error || data?.error) throw error || new Error(data.error);
+      setCoachingCenters(prev => prev.map(c => c.id === coachingId ? { ...c, fee_paid: paid } : c));
+      toast({ title: paid ? "Fee Marked as Paid" : "Fee Marked as Unpaid" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update fee status.", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+      setConfirmDialog(null);
+    }
+  };
+
+  const handleDeleteCoaching = async (coachingId: string) => {
+    setActionLoading(coachingId);
+    try {
+      const sessionToken = localStorage.getItem("adminSessionToken");
+      const { data, error } = await supabase.functions.invoke("manage-coaching", {
+        body: {
+          action: "delete_coaching_center",
+          adminCredentials: { sessionToken },
+          coachingData: { coachingId },
+        },
+      });
+      if (error || data?.error) throw error || new Error(data.error);
+      setCoachingCenters(prev => prev.filter(c => c.id !== coachingId));
+      toast({ title: "Coaching Deleted" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete coaching.", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+      setConfirmDialog(null);
+    }
+  };
+
+  const handleResetCoachingPassword = async () => {
+    if (!coachingPasswordDialog) return;
+    setResettingCoachingPassword(true);
+    try {
+      const sessionToken = localStorage.getItem("adminSessionToken");
+      const { data, error } = await supabase.functions.invoke("manage-coaching", {
+        body: {
+          action: "force_password_reset_coaching",
+          adminCredentials: { sessionToken },
+          coachingData: { coachingId: coachingPasswordDialog.coachingId },
+        },
+      });
+      if (error || data?.error) throw error || new Error(data?.error);
+      if (data?.success && data?.newPassword) {
+        setGeneratedCoachingPassword(data.newPassword);
+        toast({ title: "Password Reset!", description: `New password generated for ${coachingPasswordDialog.coachingName}` });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to reset password.", variant: "destructive" });
+    } finally {
+      setResettingCoachingPassword(false);
+    }
+  };
+
   const handleSendReport = async (studentId: string, parentWhatsapp: string) => {
     setSendingReportFor(studentId);
     try {
@@ -873,7 +1000,7 @@ const AdminDashboard = () => {
 
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4 mb-6 sm:mb-8">
           <div className="edu-card p-3 sm:p-4 text-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
               <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
@@ -887,6 +1014,13 @@ const AdminDashboard = () => {
             </div>
             <p className="text-xl sm:text-2xl font-bold">{stats.totalSchools}</p>
             <p className="text-[10px] sm:text-sm text-muted-foreground">Schools</p>
+          </div>
+          <div className="edu-card p-3 sm:p-4 text-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
+              <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            </div>
+            <p className="text-xl sm:text-2xl font-bold">{stats.totalCoaching}</p>
+            <p className="text-[10px] sm:text-sm text-muted-foreground">Coaching</p>
           </div>
           <div className="edu-card p-3 sm:p-4 text-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
@@ -921,6 +1055,15 @@ const AdminDashboard = () => {
           >
             <Building2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Schools
+          </Button>
+          <Button
+            variant={activeTab === "coaching" ? "default" : "outline"}
+            onClick={() => setActiveTab("coaching")}
+            size="sm"
+            className="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <GraduationCap className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            Coaching
           </Button>
           <Button
             variant={activeTab === "students" ? "default" : "outline"}
@@ -996,9 +1139,7 @@ const AdminDashboard = () => {
                   <div className="space-y-4">
                     <div className="bg-accent/10 border border-accent/20 rounded-xl p-4">
                       <p className="font-semibold text-accent mb-2">School Added Successfully!</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Share these credentials with the school:
-                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">Share these credentials with the school:</p>
                       <div className="space-y-2 bg-background rounded-lg p-3">
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">School ID:</span>
@@ -1010,81 +1151,62 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      className="w-full"
-                      onClick={() => {
-                        setShowAddSchool(false);
-                        setGeneratedCredentials(null);
-                        setNewSchool({ name: "", district: "", state: "Bihar", email: "", contact_whatsapp: "" });
-                      }}
-                    >
-                      Done
-                    </Button>
+                    <Button className="w-full" onClick={() => { setShowAddSchool(false); setGeneratedCredentials(null); setNewSchool({ name: "", district: "", state: "Bihar", email: "", contact_whatsapp: "" }); }}>Done</Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="schoolName">School Name *</Label>
-                      <Input
-                        id="schoolName"
-                        placeholder="Enter school name"
-                        value={newSchool.name}
-                        onChange={(e) => setNewSchool({ ...newSchool, name: e.target.value })}
-                      />
+                    <div><Label htmlFor="schoolName">School Name *</Label><Input id="schoolName" placeholder="Enter school name" value={newSchool.name} onChange={(e) => setNewSchool({ ...newSchool, name: e.target.value })} /></div>
+                    <div><Label htmlFor="district">District</Label><Input id="district" placeholder="e.g., Kishanganj" value={newSchool.district} onChange={(e) => setNewSchool({ ...newSchool, district: e.target.value })} /></div>
+                    <div><Label htmlFor="state">State</Label><Input id="state" placeholder="e.g., Bihar" value={newSchool.state} onChange={(e) => setNewSchool({ ...newSchool, state: e.target.value })} /></div>
+                    <div><Label htmlFor="email">Email</Label><Input id="email" type="email" placeholder="school@example.com" value={newSchool.email} onChange={(e) => setNewSchool({ ...newSchool, email: e.target.value })} /></div>
+                    <div><Label htmlFor="whatsapp">WhatsApp</Label><Input id="whatsapp" placeholder="9876543210" value={newSchool.contact_whatsapp} onChange={(e) => setNewSchool({ ...newSchool, contact_whatsapp: e.target.value })} /></div>
+                    <Button className="w-full" onClick={handleAddSchool} disabled={addingSchool}>
+                      {addingSchool ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding...</> : <><Plus className="w-4 h-4 mr-2" />Add School</>}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          )}
+          {activeTab === "coaching" && (
+            <Dialog open={showAddCoaching} onOpenChange={setShowAddCoaching}>
+              <DialogTrigger asChild>
+                <Button variant="hero" size="sm" className="text-xs sm:text-sm">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Add Coaching
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add New Coaching Center</DialogTitle>
+                </DialogHeader>
+                {generatedCoachingCredentials ? (
+                  <div className="space-y-4">
+                    <div className="bg-accent/10 border border-accent/20 rounded-xl p-4">
+                      <p className="font-semibold text-accent mb-2">Coaching Center Added!</p>
+                      <p className="text-sm text-muted-foreground mb-4">Share these credentials:</p>
+                      <div className="space-y-2 bg-background rounded-lg p-3">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Coaching ID:</span>
+                          <span className="font-mono font-bold">{generatedCoachingCredentials.id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Password:</span>
+                          <span className="font-mono font-bold">{generatedCoachingCredentials.password}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="district">District</Label>
-                      <Input
-                        id="district"
-                        placeholder="e.g., Kishanganj"
-                        value={newSchool.district}
-                        onChange={(e) => setNewSchool({ ...newSchool, district: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        placeholder="e.g., Bihar"
-                        value={newSchool.state}
-                        onChange={(e) => setNewSchool({ ...newSchool, state: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email (for notifications)</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="school@example.com"
-                        value={newSchool.email}
-                        onChange={(e) => setNewSchool({ ...newSchool, email: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="whatsapp">WhatsApp (for notifications)</Label>
-                      <Input
-                        id="whatsapp"
-                        placeholder="9876543210"
-                        value={newSchool.contact_whatsapp}
-                        onChange={(e) => setNewSchool({ ...newSchool, contact_whatsapp: e.target.value })}
-                      />
-                    </div>
-                    <Button
-                      className="w-full"
-                      onClick={handleAddSchool}
-                      disabled={addingSchool}
-                    >
-                      {addingSchool ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add School
-                        </>
-                      )}
+                    <Button className="w-full" onClick={() => { setShowAddCoaching(false); setGeneratedCoachingCredentials(null); setNewCoaching({ name: "", district: "", state: "Bihar", email: "", contact_whatsapp: "" }); }}>Done</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div><Label>Coaching Name *</Label><Input placeholder="Enter coaching name" value={newCoaching.name} onChange={(e) => setNewCoaching({ ...newCoaching, name: e.target.value })} /></div>
+                    <div><Label>District</Label><Input placeholder="e.g., Kishanganj" value={newCoaching.district} onChange={(e) => setNewCoaching({ ...newCoaching, district: e.target.value })} /></div>
+                    <div><Label>State</Label><Input placeholder="e.g., Bihar" value={newCoaching.state} onChange={(e) => setNewCoaching({ ...newCoaching, state: e.target.value })} /></div>
+                    <div><Label>Email</Label><Input type="email" placeholder="coaching@example.com" value={newCoaching.email} onChange={(e) => setNewCoaching({ ...newCoaching, email: e.target.value })} /></div>
+                    <div><Label>WhatsApp</Label><Input placeholder="9876543210" value={newCoaching.contact_whatsapp} onChange={(e) => setNewCoaching({ ...newCoaching, contact_whatsapp: e.target.value })} /></div>
+                    <Button className="w-full" onClick={handleAddCoaching} disabled={addingCoaching}>
+                      {addingCoaching ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding...</> : <><Plus className="w-4 h-4 mr-2" />Add Coaching</>}
                     </Button>
                   </div>
                 )}
@@ -1201,6 +1323,56 @@ const AdminDashboard = () => {
                 <div className="p-8 text-center text-muted-foreground">
                   No schools found.
                 </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Coaching Centers Tab */}
+        {activeTab === "coaching" && (
+          <div className="edu-card overflow-hidden">
+            <div className="p-3 sm:p-4 border-b border-border bg-secondary/30">
+              <h2 className="font-bold text-sm sm:text-base">Registered Coaching Centers</h2>
+            </div>
+            <div className="divide-y divide-border">
+              {filteredCoachingCenters.map((cc) => (
+                <div key={cc.id} className={`p-3 sm:p-4 ${cc.is_banned ? 'bg-destructive/5' : !cc.fee_paid ? 'bg-warning/5' : ''}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${cc.is_banned ? 'bg-destructive/10' : !cc.fee_paid ? 'bg-warning/10' : 'bg-primary/10'}`}>
+                        <GraduationCap className={`w-4 h-4 sm:w-5 sm:h-5 ${cc.is_banned ? 'text-destructive' : !cc.fee_paid ? 'text-warning' : 'text-primary'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                          <p className="font-semibold text-sm sm:text-base truncate">{cc.name}</p>
+                          {cc.is_banned && <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] sm:text-xs font-medium">Banned</span>}
+                          {!cc.fee_paid && !cc.is_banned && <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-warning/10 text-warning text-[10px] sm:text-xs font-medium">Unpaid</span>}
+                        </div>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                          ID: {cc.coaching_id} • {cc.studentCount} students
+                          {cc.district && ` • ${cc.district}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 ml-10 sm:ml-0">
+                      <Button variant="outline" size="sm" onClick={() => setConfirmDialog({ open: true, type: "fee", entity: "school", id: cc.id, name: cc.name })} disabled={actionLoading === cc.id} className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 ${cc.fee_paid ? "text-accent" : "text-warning"}`}>
+                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1" />{cc.fee_paid ? "Paid" : "Unpaid"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleBanCoaching(cc.id, !cc.is_banned)} disabled={actionLoading === cc.id} className={`text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 ${cc.is_banned ? "text-accent" : "text-destructive"}`}>
+                        {cc.is_banned ? <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <Ban className="w-3 h-3 sm:w-4 sm:h-4" />}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteCoaching(cc.id)} disabled={actionLoading === cc.id} className="text-destructive hover:bg-destructive/10 h-7 sm:h-8 px-2 sm:px-3">
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => { setCoachingPasswordDialog({ open: true, coachingId: cc.id, coachingName: cc.name }); setGeneratedCoachingPassword(null); }} disabled={actionLoading === cc.id} className="text-primary hover:bg-primary/10 h-7 sm:h-8 px-2 sm:px-3" title="Reset Password">
+                        <Key className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {filteredCoachingCenters.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground">No coaching centers found.</div>
               )}
             </div>
           </div>
@@ -1438,10 +1610,13 @@ const AdminDashboard = () => {
               {confirmDialog?.type === "ban" && `Are you sure you want to ban ${confirmDialog.name}? They will lose access to the platform.`}
               {confirmDialog?.type === "unban" && `Are you sure you want to unban ${confirmDialog.name}? They will regain access to the platform.`}
               {confirmDialog?.type === "delete" && `Are you sure you want to permanently delete ${confirmDialog.name}? This action cannot be undone.`}
-              {confirmDialog?.type === "fee" && confirmDialog.entity === "school" && (
-                schools.find(s => s.id === confirmDialog.id)?.fee_paid
-                  ? `Mark ${confirmDialog.name}'s fee as unpaid? They will lose dashboard access.`
-                  : `Mark ${confirmDialog.name}'s fee as paid? They will regain dashboard access.`
+              {confirmDialog?.type === "fee" && (
+                (() => {
+                  const item = schools.find(s => s.id === confirmDialog.id) || coachingCenters.find(c => c.id === confirmDialog.id);
+                  return item?.fee_paid
+                    ? `Mark ${confirmDialog.name}'s fee as unpaid? They will lose dashboard access.`
+                    : `Mark ${confirmDialog.name}'s fee as paid? They will regain dashboard access.`;
+                })()
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1463,7 +1638,12 @@ const AdminDashboard = () => {
                   else handleDeleteStudent(confirmDialog.id);
                 } else if (confirmDialog.type === "fee") {
                   const school = schools.find(s => s.id === confirmDialog.id);
-                  if (school) handleToggleFee(confirmDialog.id, !school.fee_paid);
+                  if (school) {
+                    handleToggleFee(confirmDialog.id, !school.fee_paid);
+                  } else {
+                    const cc = coachingCenters.find(c => c.id === confirmDialog.id);
+                    if (cc) handleToggleCoachingFee(confirmDialog.id, !cc.fee_paid);
+                  }
                 }
               }}
             >
@@ -1583,6 +1763,51 @@ const AdminDashboard = () => {
                        Generate New Password
                      </>
                    )}
+                 </Button>
+               </DialogFooter>
+             </div>
+           )}
+         </DialogContent>
+       </Dialog>
+
+       {/* Coaching Password Reset Dialog */}
+       <Dialog 
+         open={coachingPasswordDialog?.open} 
+         onOpenChange={(open) => {
+           if (!open) { setCoachingPasswordDialog(null); setGeneratedCoachingPassword(null); }
+         }}
+       >
+         <DialogContent className="max-w-md">
+           <DialogHeader>
+             <DialogTitle className="flex items-center gap-2">
+               <Key className="w-5 h-5 text-primary" />Reset Coaching Password
+             </DialogTitle>
+           </DialogHeader>
+           {generatedCoachingPassword ? (
+             <div className="space-y-4">
+               <div className="bg-accent/10 border border-accent/20 rounded-xl p-4">
+                 <p className="font-semibold text-accent mb-2">Password Reset Successfully!</p>
+                 <p className="text-sm text-muted-foreground mb-4">Share with <span className="font-medium">{coachingPasswordDialog?.coachingName}</span>:</p>
+                 <div className="space-y-2 bg-background rounded-lg p-3">
+                   <div className="flex justify-between items-center">
+                     <span className="text-sm text-muted-foreground">New Password:</span>
+                     <div className="flex items-center gap-2">
+                       <span className="font-mono font-bold text-sm">{generatedCoachingPassword}</span>
+                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { navigator.clipboard.writeText(generatedCoachingPassword); toast({ title: "Copied!" }); }}>📋</Button>
+                     </div>
+                   </div>
+                 </div>
+                 <p className="text-xs text-muted-foreground mt-3">⚠️ Coaching will be required to change this password on next login.</p>
+               </div>
+               <Button className="w-full" onClick={() => { setCoachingPasswordDialog(null); setGeneratedCoachingPassword(null); }}>Done</Button>
+             </div>
+           ) : (
+             <div className="space-y-4">
+               <p className="text-sm text-muted-foreground">This will generate a new secure password for <span className="font-medium">{coachingPasswordDialog?.coachingName}</span>. All existing sessions will be revoked.</p>
+               <DialogFooter>
+                 <Button variant="outline" onClick={() => setCoachingPasswordDialog(null)}>Cancel</Button>
+                 <Button onClick={handleResetCoachingPassword} disabled={resettingCoachingPassword}>
+                   {resettingCoachingPassword ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : <><Key className="w-4 h-4 mr-2" />Generate New Password</>}
                  </Button>
                </DialogFooter>
              </div>
