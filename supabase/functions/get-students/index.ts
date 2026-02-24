@@ -359,7 +359,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      const { studentId } = await req.json().catch(() => ({}));
       const targetStudentId = studentId || student_id;
       
       if (!targetStudentId) {
@@ -541,6 +540,60 @@ Deno.serve(async (req) => {
           districtRankings,
           schoolDistrict: school.district
         }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } else if (user_type === 'coaching') {
+      // Validate coaching session token
+      const validation = await validateSessionToken(supabaseAdmin, session_token, 'coaching', school_id);
+      if (!validation.valid) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid or expired coaching session' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch students for this coaching center
+      const { data: students, error: studentsError } = await supabaseAdmin
+        .from('students')
+        .select('*')
+        .eq('coaching_center_id', school_id)
+        .or('is_banned.eq.false,is_banned.is.null')
+        .order('created_at', { ascending: false });
+
+      if (studentsError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch students' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch study sessions with quiz attempts for each student
+      const studentsWithSessions = await Promise.all(
+        (students || []).map(async (student) => {
+          const { data: sessions } = await supabaseAdmin
+            .from('study_sessions')
+            .select('*, quiz_attempts(accuracy_percentage)')
+            .eq('student_id', student.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+          const enhancedSessions = (sessions || []).map((session: any) => {
+            const quizAttempts = session.quiz_attempts as { accuracy_percentage: number | null }[] | null;
+            const quizScore = (quizAttempts && quizAttempts.length > 0 && quizAttempts[0].accuracy_percentage !== null)
+              ? quizAttempts[0].accuracy_percentage : null;
+            return { ...session, improvement_score: quizScore !== null ? quizScore : session.improvement_score };
+          });
+
+          return { ...student, study_sessions: enhancedSessions, schools: { name: 'Coaching Center' } };
+        })
+      );
+
+      const approvedStudents = studentsWithSessions.filter((s: any) => s.is_approved);
+      const rankings = calculateStudentRankings(approvedStudents);
+
+      return new Response(
+        JSON.stringify({ students: studentsWithSessions, rankings }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
