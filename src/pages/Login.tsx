@@ -77,18 +77,32 @@ const Login = () => {
       const { error } = await signIn(email, password);
       
       if (error) {
-        // Ignore abort errors (caused by rapid taps or component unmount)
-        if (error.message?.includes('signal is aborted') || error.message?.includes('AbortError')) {
-          console.log('Login: Ignoring abort signal, retrying...');
+        // Ignore abort/LockManager errors (caused by rapid taps, WebView, or component unmount)
+        const isRetryable = error.message?.includes('signal is aborted') || 
+                           error.message?.includes('AbortError') ||
+                           error.message?.includes('LockManager') ||
+                           error.message?.includes('timed out');
+        
+        if (isRetryable) {
+          console.log('Login: Ignoring retryable error, retrying...', error.message);
           // Retry once after a small delay
           try {
+            await new Promise(r => setTimeout(r, 500));
             const retryResult = await signIn(email, password);
             if (retryResult.error) {
+              // If retry also fails with retryable error, just ignore
+              if (retryResult.error.message?.includes('signal is aborted') || 
+                  retryResult.error.message?.includes('AbortError') ||
+                  retryResult.error.message?.includes('LockManager') ||
+                  retryResult.error.message?.includes('timed out')) {
+                setIsLoading(false);
+                return;
+              }
               throw retryResult.error;
             }
           } catch (retryErr: any) {
-            if (retryErr.message?.includes('signal is aborted') || retryErr.message?.includes('AbortError')) {
-              // Still aborted, just ignore - likely a network issue
+            if (retryErr.message?.includes('signal is aborted') || retryErr.message?.includes('AbortError') ||
+                retryErr.message?.includes('LockManager') || retryErr.message?.includes('timed out')) {
               setIsLoading(false);
               return;
             }
