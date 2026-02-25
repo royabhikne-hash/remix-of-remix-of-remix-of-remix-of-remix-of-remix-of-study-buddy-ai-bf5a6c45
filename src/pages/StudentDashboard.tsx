@@ -18,6 +18,8 @@ import {
   Sparkles,
   Brain,
   ClipboardList,
+  Zap,
+  Target,
 } from "lucide-react";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import StudentRankingCard from "@/components/StudentRankingCard";
@@ -77,8 +79,9 @@ const StudentDashboard = () => {
     daysStudied: 0,
   });
 
-  // Weekly Performance Score
+  // Weekly Performance Score from weekly tests
   const [weeklyWPS, setWeeklyWPS] = useState<number | null>(null);
+  const [latestTestAccuracy, setLatestTestAccuracy] = useState<number | null>(null);
 
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
 
@@ -224,6 +227,41 @@ const StudentDashboard = () => {
               };
             });
             setRecentSessions(recent);
+
+            // Fetch weekly tests for WPS
+            const { data: weeklyTestsData } = await supabase
+              .from("weekly_tests")
+              .select("accuracy_percentage, weak_subjects, week_start, week_end, created_at")
+              .eq("student_id", student.id)
+              .order("created_at", { ascending: true });
+
+            if (weeklyTestsData && weeklyTestsData.length > 0) {
+              const latestTest = weeklyTestsData[weeklyTestsData.length - 1];
+              setLatestTestAccuracy(latestTest.accuracy_percentage);
+
+              // Calculate WPS for latest test
+              const accuracy = latestTest.accuracy_percentage;
+              const prevTest = weeklyTestsData.length > 1 ? weeklyTestsData[weeklyTestsData.length - 2] : null;
+              const improvement = prevTest ? Math.max(0, accuracy - prevTest.accuracy_percentage) : 0;
+              const currentWeak = (latestTest.weak_subjects || []).length;
+              const prevWeak = prevTest ? (prevTest.weak_subjects || []).length : currentWeak;
+              const weakReduction = prevWeak > 0 ? Math.max(0, ((prevWeak - currentWeak) / prevWeak) * 100) : (currentWeak === 0 ? 100 : 0);
+              
+              // Consistency from sessions this week
+              const testWeekStart = new Date(latestTest.week_start);
+              const testWeekEnd = new Date(latestTest.week_end);
+              const testWeekSessions = sessions?.filter(s => {
+                const d = new Date(s.created_at);
+                return d >= testWeekStart && d <= testWeekEnd;
+              }) || [];
+              const testWeekDays = new Set(testWeekSessions.map(s => new Date(s.created_at).toDateString())).size;
+              const consistencyScore = (testWeekDays / 7) * 100;
+
+              const wps = Math.round(
+                (accuracy * 0.5) + (improvement * 0.25) + (weakReduction * 0.15) + (consistencyScore * 0.10)
+              );
+              setWeeklyWPS(wps);
+            }
           }
         }
         setIsDataLoading(false);
@@ -590,7 +628,13 @@ const StudentDashboard = () => {
 
             {/* Stats Grid - Week View */}
             {analyticsView === "week" && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                <StatCard
+                  icon={<Zap className="w-5 h-5" />}
+                  label="WPS Score"
+                  value={weeklyWPS !== null ? `${weeklyWPS}%` : "-"}
+                  color={weeklyWPS !== null && weeklyWPS >= 70 ? "accent" : "primary"}
+                />
                 <StatCard
                   icon={<CalendarDays className="w-5 h-5" />}
                   label="Days Studied"
@@ -610,9 +654,9 @@ const StudentDashboard = () => {
                   color="primary"
                 />
                 <StatCard
-                  icon={<TrendingUp className="w-5 h-5" />}
-                  label="Week Avg Score"
-                  value={weekStats.avgScore > 0 ? `${weekStats.avgScore}%` : "-"}
+                  icon={<Target className="w-5 h-5" />}
+                  label="Test Accuracy"
+                  value={latestTestAccuracy !== null ? `${latestTestAccuracy}%` : "-"}
                   color="accent"
                 />
               </div>
