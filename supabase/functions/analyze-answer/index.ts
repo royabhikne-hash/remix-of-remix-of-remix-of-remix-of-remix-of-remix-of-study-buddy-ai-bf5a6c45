@@ -14,11 +14,21 @@ interface AnalyzeRequest {
   studentId?: string;
 }
 
-// In-memory rate limiting
+// In-memory rate limiting - optimized for 5k users
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
+let lastCleanup = Date.now();
 
-function checkRateLimit(userId: string, maxRequests = 50, windowMs = 60000): boolean {
+function checkRateLimit(userId: string, maxRequests = 30, windowMs = 60000): boolean {
   const now = Date.now();
+  
+  // Periodic cleanup
+  if (now - lastCleanup > 300000) {
+    for (const [key, val] of rateLimits) {
+      if (now > val.resetAt) rateLimits.delete(key);
+    }
+    lastCleanup = now;
+  }
+  
   const key = `analyze:${userId}`;
   const limit = rateLimits.get(key);
   
