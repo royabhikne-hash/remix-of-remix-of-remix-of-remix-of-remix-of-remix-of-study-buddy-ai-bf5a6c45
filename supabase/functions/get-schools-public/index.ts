@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
     const action = (body?.action as string | undefined) ?? "list";
     const schoolId = (body?.school_id as string | undefined) ?? undefined;
     const district = (body?.district as string | undefined) ?? undefined;
-    const institutionType = (body?.institution_type as string | undefined) ?? undefined;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -29,7 +28,8 @@ Deno.serve(async (req) => {
         .order("name", { ascending: true });
 
       if (district) {
-        query = query.ilike("district", district.trim());
+        // Use wildcard matching for partial/flexible district search
+        query = query.ilike("district", `%${district.trim()}%`);
       }
 
       const { data, error } = await query;
@@ -83,7 +83,8 @@ Deno.serve(async (req) => {
       .order("name", { ascending: true });
 
     if (district) {
-      query = query.ilike("district", district.trim());
+      // Use wildcard matching for partial/flexible district search
+      query = query.ilike("district", `%${district.trim()}%`);
     }
 
     const { data, error } = await query;

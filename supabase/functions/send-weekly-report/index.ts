@@ -56,6 +56,57 @@ interface DetailedReport {
   parentTips: string[];
 }
 
+// Weekly Performance Score (WPS) calculation
+// WPS = (Accuracy × 0.5) + (Improvement × 0.25) + (Weak Topic Score × 0.15) + (Consistency × 0.10)
+interface WPSResult {
+  wps: number;
+  accuracyScore: number;
+  improvementScore: number;
+  weakTopicScore: number;
+  consistencyScore: number;
+  grade: string;
+  gradeLabel: string;
+}
+
+const calculateWPS = (
+  avgAccuracy: number, 
+  prevWeekAccuracy: number | null,
+  weakTopicsReduced: boolean,
+  daysStudied: number
+): WPSResult => {
+  // A. Accuracy Score (50%) - direct percentage
+  const accuracyScore = Math.min(100, Math.max(0, avgAccuracy));
+  
+  // B. Improvement Score (25%) - difference from last week, capped at ±30
+  const rawImprovement = prevWeekAccuracy !== null ? (avgAccuracy - prevWeekAccuracy) : 0;
+  const improvementScore = Math.min(100, Math.max(0, 50 + rawImprovement)); // 50 = no change baseline
+  
+  // C. Weak Topic Reduction (15%) - binary: did weak topics reduce?
+  const weakTopicScore = weakTopicsReduced ? 100 : 30;
+  
+  // D. Consistency Score (10%) - (Active study days / 7) × 100
+  const consistencyScore = Math.round((daysStudied / 7) * 100);
+  
+  // Final WPS
+  const wps = Math.round(
+    (accuracyScore * 0.5) +
+    (improvementScore * 0.25) +
+    (weakTopicScore * 0.15) +
+    (consistencyScore * 0.10)
+  );
+  
+  // Grade based on WPS
+  let grade: string, gradeLabel: string;
+  if (wps >= 85) { grade = "A+"; gradeLabel = "Excellent"; }
+  else if (wps >= 75) { grade = "A"; gradeLabel = "Very Good"; }
+  else if (wps >= 65) { grade = "B+"; gradeLabel = "Good"; }
+  else if (wps >= 55) { grade = "B"; gradeLabel = "Above Average"; }
+  else if (wps >= 45) { grade = "C"; gradeLabel = "Average"; }
+  else { grade = "D"; gradeLabel = "Needs Improvement"; }
+  
+  return { wps, accuracyScore, improvementScore, weakTopicScore, consistencyScore, grade, gradeLabel };
+};
+
 const calculateGrade = (avgScore: number, avgAccuracy: number, sessionCount: number): { grade: string; label: string } => {
   const score = (avgScore * 0.4) + (avgAccuracy * 0.3) + (sessionCount * 5 * 0.3);
   if (score >= 85) return { grade: "A+", label: "Excellent" };
@@ -203,6 +254,18 @@ ${trendEmoji} ${t.trend}: ${trendText}
 ║ 🔥 ${t.streak}: *${report.currentStreak} days*
 ╚══════════════════════════`;
 
+  // Add WPS if available
+  const wps = (report as any).wps;
+  if (wps) {
+    message += `\n\n📊 *Weekly Performance Score: ${wps.wps}/100*
+╔══════════════════════════
+║ 🎯 Accuracy: ${wps.accuracyScore}% (50%)
+║ 📈 Improvement: ${wps.improvementScore}% (25%)
+║ 🧠 Weak Topics: ${wps.weakTopicScore}% (15%)
+║ 📅 Consistency: ${wps.consistencyScore}% (10%)
+╚══════════════════════════`;
+  }
+
   if (report.strongAreas.length > 0) {
     message += `\n\n✅ *${t.strong}:*\n${report.strongAreas.slice(0, 3).map(a => `   • ${a}`).join('\n')}`;
   }
@@ -214,12 +277,6 @@ ${trendEmoji} ${t.trend}: ${trendText}
   if (report.recommendations.length > 0) {
     message += `\n\n💡 *${t.tips}:*\n${report.recommendations.slice(0, 3).map(r => `   ${r}`).join('\n')}`;
   }
-
-  // Subject-wise summary
-  if (report.subjectsStudied.length > 0) {
-    const subjectEmojis: Record<string, string> = {
-      "Mathematics": "🔢", "Math": "🔢",
-      "Science": "🔬",
       "Hindi": "📕",
       "English": "📗",
       "Social Science": "🌍",
@@ -309,8 +366,30 @@ serve(async (req) => {
         .gte("created_at", sevenDaysAgo)
         .order("created_at", { ascending: false });
 
+      // Get previous week's data for WPS improvement calculation
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: prevWeekQuizzes } = await supabase
+        .from("quiz_attempts")
+        .select("accuracy_percentage")
+        .eq("student_id", student.id)
+        .gte("created_at", fourteenDaysAgo)
+        .lt("created_at", sevenDaysAgo);
+      
+      const { data: prevWeekTests } = await supabase
+        .from("weekly_tests")
+        .select("weak_subjects")
+        .eq("student_id", student.id)
+        .lt("created_at", sevenDaysAgo)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      const prevWeekAccuracy = prevWeekQuizzes && prevWeekQuizzes.length > 0
+        ? Math.round(prevWeekQuizzes.reduce((acc, q) => acc + (q.accuracy_percentage || 0), 0) / prevWeekQuizzes.length)
+        : null;
+      
+      const prevWeakTopics = prevWeekTests?.[0]?.weak_subjects || [];
+
       const sessionList: SessionData[] = (sessions || []) as SessionData[];
-      const quizList: QuizData[] = (quizzes || []) as QuizData[];
       
       const totalSessions = sessionList.length;
       const totalMinutes = sessionList.reduce((acc, s) => acc + (s.time_spent || 0), 0);
@@ -391,7 +470,11 @@ serve(async (req) => {
         else if (recentAvg < olderAvg - 5) trend = "declining";
       }
       
-      const gradeInfo = calculateGrade(avgScore, avgAccuracy, totalSessions);
+      // Calculate WPS
+      const weakTopicsReduced = prevWeakTopics.length > 0 && weakAreas.length < prevWeakTopics.length;
+      const wpsResult = calculateWPS(avgAccuracy, prevWeekAccuracy, weakTopicsReduced, daysStudied);
+      
+      const gradeInfo = { grade: wpsResult.grade, label: wpsResult.gradeLabel };
       
       const recommendations: string[] = [];
       if (currentStreak === 0) {
@@ -449,7 +532,8 @@ serve(async (req) => {
         currentStreak,
         recommendations,
         parentTips,
-      };
+        wps: wpsResult,
+      } as any;
       
       reports.push({ studentName: student.full_name, reportData: report });
       

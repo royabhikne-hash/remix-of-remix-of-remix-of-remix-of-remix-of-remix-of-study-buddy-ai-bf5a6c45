@@ -148,10 +148,10 @@ Return ONLY a valid JSON array with this exact format, no other text:
         });
       }
 
-      // Get subjects studied this week from study_sessions and mcq_attempts
+      // Get subjects & topics studied this week from study_sessions and mcq_attempts
       const { data: sessions } = await supabase
         .from("study_sessions")
-        .select("subject, topic")
+        .select("subject, topic, weak_areas, strong_areas")
         .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString());
 
@@ -161,14 +161,30 @@ Return ONLY a valid JSON array with this exact format, no other text:
         .eq("student_id", studentId)
         .gte("created_at", weekStart.toISOString());
 
+      // Get previous weak topics from older weekly tests
+      const { data: prevTests } = await supabase
+        .from("weekly_tests")
+        .select("weak_subjects")
+        .eq("student_id", studentId)
+        .order("created_at", { ascending: false })
+        .limit(3);
+
       const studiedSubjects = new Set<string>();
+      const studiedTopics = new Set<string>();
+      const weakTopics = new Set<string>();
+      
       sessions?.forEach(s => {
         if (s.subject) studiedSubjects.add(s.subject);
-        if (s.topic && s.topic !== "General Study") studiedSubjects.add(s.topic);
+        if (s.topic && s.topic !== "General Study") studiedTopics.add(s.topic);
+        (s.weak_areas || []).forEach((w: string) => weakTopics.add(w));
       });
       mcqAttempts?.forEach(a => studiedSubjects.add(a.subject));
+      
+      // Add previously weak subjects
+      prevTests?.forEach(t => {
+        (t.weak_subjects || []).forEach((w: string) => weakTopics.add(w));
+      });
 
-      // Use provided subjects or fallback to studied subjects
       const testSubjects = subjects?.length > 0 ? subjects : [...studiedSubjects];
       
       if (testSubjects.length === 0) {
@@ -177,20 +193,36 @@ Return ONLY a valid JSON array with this exact format, no other text:
         });
       }
 
-      // Generate 25-40 questions based on number of subjects
+      // Adaptive test: 70% current week topics, 30% previously weak topics
       const totalQuestions = Math.min(40, Math.max(25, testSubjects.length * 10));
-      const questionsPerSubject = Math.ceil(totalQuestions / testSubjects.length);
+      const currentTopicQuestions = Math.round(totalQuestions * 0.7);
+      const weakTopicQuestions = totalQuestions - currentTopicQuestions;
+      
+      const weakTopicsList = [...weakTopics].filter(w => !testSubjects.includes(w)).slice(0, 5);
+      const topicsList = [...studiedTopics].slice(0, 10);
 
       const subjectList = testSubjects.join(", ");
-      const prompt = `Generate exactly ${totalQuestions} multiple choice questions for ${student.board} Class ${student.class} covering these subjects: ${subjectList}.
+      const weakList = weakTopicsList.length > 0 ? weakTopicsList.join(", ") : "None";
+      const topicsContext = topicsList.length > 0 ? topicsList.join(", ") : subjectList;
+      
+      const prompt = `Generate exactly ${totalQuestions} multiple choice questions for ${student.board} Class ${student.class}.
+
+ADAPTIVE TEST STRUCTURE:
+- ${currentTopicQuestions} questions (70%) from THIS WEEK's studied topics: ${topicsContext}
+- ${weakTopicQuestions} questions (30%) from PREVIOUSLY WEAK areas: ${weakList}
+- Subjects covered: ${subjectList}
+
+DIFFICULTY DISTRIBUTION:
+- Easy (30%): Basic recall & understanding
+- Medium (50%): Application & analysis
+- Hard (20%): Higher-order thinking
 
 RULES:
-- Distribute questions roughly equally across subjects (about ${questionsPerSubject} per subject)
 - Follow official ${student.board} board exam pattern
 - Each question must have 4 options (A, B, C, D) 
 - Include the subject name for each question
-- Mix difficulty: easy (20%), medium (60%), hard (20%)
-- This is a weekly assessment test
+- Mark difficulty level for each question
+- This is a weekly adaptive assessment test
 
 Return ONLY a valid JSON array:
 [
@@ -202,7 +234,9 @@ Return ONLY a valid JSON array:
     "optionC": "Option C", 
     "optionD": "Option D",
     "correctAnswer": "A",
-    "explanation": "Brief explanation."
+    "explanation": "Brief explanation.",
+    "difficulty": "easy|medium|hard",
+    "isWeakTopic": false
   }
 ]`;
 

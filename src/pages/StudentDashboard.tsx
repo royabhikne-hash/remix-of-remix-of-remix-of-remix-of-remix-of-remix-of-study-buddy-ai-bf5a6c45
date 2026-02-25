@@ -77,6 +77,9 @@ const StudentDashboard = () => {
     daysStudied: 0,
   });
 
+  // Weekly Performance Score
+  const [weeklyWPS, setWeeklyWPS] = useState<number | null>(null);
+
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
 
   useEffect(() => {
