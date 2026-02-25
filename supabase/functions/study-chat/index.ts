@@ -6,11 +6,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// In-memory rate limiting (per isolate)
+// In-memory rate limiting (per isolate) - optimized for 5k users
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_CLEANUP_INTERVAL = 300000; // 5 min
+let lastCleanup = Date.now();
 
-function checkRateLimit(userId: string, maxRequests = 30, windowMs = 60000): boolean {
+function checkRateLimit(userId: string, maxRequests = 20, windowMs = 60000): boolean {
   const now = Date.now();
+  
+  // Periodic cleanup to prevent memory leaks at scale
+  if (now - lastCleanup > RATE_LIMIT_CLEANUP_INTERVAL) {
+    for (const [key, val] of rateLimits) {
+      if (now > val.resetAt) rateLimits.delete(key);
+    }
+    lastCleanup = now;
+  }
+  
   const key = `chat:${userId}`;
   const limit = rateLimits.get(key);
   
@@ -284,9 +295,9 @@ Keep topics short (2-3 words max).` : "";
       { role: "system", content: systemPrompt + analysisInstruction },
     ];
 
-    // Add conversation history (limit to last 6 messages for speed)
+    // Add conversation history (limit to last 4 messages for speed at 5k scale)
     if (messages && Array.isArray(messages)) {
-      const recentMessages = messages.slice(-6);
+      const recentMessages = messages.slice(-4);
       for (const msg of recentMessages as ChatMessage[]) {
         if (msg.imageUrl) {
           chatMessages.push({
@@ -305,8 +316,8 @@ Keep topics short (2-3 words max).` : "";
       }
     }
 
-    // Use Gemini 3.0 Flash as primary model
-    const PRIMARY_MODEL = "google/gemini-3-flash-preview";
+    // Use fast model for 5k user scale
+    const PRIMARY_MODEL = "google/gemini-2.5-flash-lite";
     const FALLBACK_MODEL = "google/gemini-2.5-flash";
 
     const callLovableAI = async (model: string) => {
