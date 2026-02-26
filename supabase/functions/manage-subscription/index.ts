@@ -215,7 +215,7 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response(
           JSON.stringify({
             success: true,
-            subscription: subscription || { plan, tts_used: 0, tts_limit: plan === 'pro' ? 150000 : 0 },
+            subscription: subscription || { plan, tts_used: 0, tts_limit: plan === 'pro' ? 90000 : 0 },
             pendingRequest,
             studentType: studentInfo?.student_type || 'school_student',
             dailyUsage: {
@@ -492,7 +492,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Reset TTS for pro plan
         if (approvedPlan === 'pro') {
           updateData.tts_used = 0;
-          updateData.tts_limit = 150000;
+          updateData.tts_limit = 90000;
         }
 
         await admin.from('subscriptions')

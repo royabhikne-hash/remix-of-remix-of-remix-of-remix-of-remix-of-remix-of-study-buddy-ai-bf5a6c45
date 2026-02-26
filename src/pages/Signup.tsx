@@ -69,9 +69,10 @@ const Signup = () => {
     const loadInstitutions = async () => {
       setLoadingInstitutions(true);
       try {
+        const state = formData.state.trim();
         if (studentType === "school_student") {
           const { data, error } = await supabase.functions.invoke("get-schools-public", {
-            body: { action: "list", district },
+            body: { action: "list", district, state: state || undefined },
           });
           if (!error && !data?.error) {
             const list = (data?.schools as School[]) ?? [];
@@ -80,7 +81,7 @@ const Signup = () => {
           }
         } else if (studentType === "coaching_student") {
           const { data, error } = await supabase.functions.invoke("get-schools-public", {
-            body: { action: "list_coaching_centers", district },
+            body: { action: "list_coaching_centers", district, state: state || undefined },
           });
           if (!error && !data?.error) {
             const list = (data?.coachingCenters as CoachingCenter[]) ?? [];
@@ -97,7 +98,7 @@ const Signup = () => {
 
     const debounce = setTimeout(loadInstitutions, 500);
     return () => clearTimeout(debounce);
-  }, [formData.district, studentType]);
+  }, [formData.district, formData.state, studentType]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
