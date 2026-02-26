@@ -491,6 +491,31 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   const handleSendMessage = async () => {
     if (!inputValue.trim() && !selectedImage) return;
 
+    // Check daily usage limits BEFORE sending
+    if (studentId) {
+      try {
+        const usageType = selectedImage ? "image" : "chat";
+        const { data: usageData, error: usageError } = await supabase.functions.invoke('manage-subscription', {
+          body: { action: 'check_daily_usage', studentId, usageType },
+        });
+
+        if (usageError) {
+          console.error("Usage check error:", usageError);
+        } else if (usageData && usageData.allowed === false) {
+          toast({
+            title: usageType === "image" ? "📸 Image Limit Reached!" : "💬 Chat Limit Reached!",
+            description: `Aaj ka ${usageType} limit khatam ho gaya (${usageData.currentCount}/${usageData.limit}). Plan upgrade karo for more!`,
+            variant: "destructive",
+            duration: 5000,
+          });
+          return;
+        }
+      } catch (err) {
+        console.error("Usage limit check failed:", err);
+        // Continue if check fails - don't block user
+      }
+    }
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -510,7 +535,6 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     let detectedTopic = currentTopic;
     
     if (foundTopic) {
-      // Map common variations to proper names
       const topicMap: Record<string, string> = {
         "maths": "Math",
         "bio": "Biology",
