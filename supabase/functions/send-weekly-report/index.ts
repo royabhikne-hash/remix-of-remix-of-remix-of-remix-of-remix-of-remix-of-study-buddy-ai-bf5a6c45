@@ -277,6 +277,11 @@ ${trendEmoji} ${t.trend}: ${trendText}
   if (report.recommendations.length > 0) {
     message += `\n\n💡 *${t.tips}:*\n${report.recommendations.slice(0, 3).map(r => `   ${r}`).join('\n')}`;
   }
+
+  if (report.subjectsStudied && report.subjectsStudied.length > 0) {
+    const subjectEmojis: Record<string, string> = {
+      "Mathematics": "📐",
+      "Science": "🔬",
       "Hindi": "📕",
       "English": "📗",
       "Social Science": "🌍",
