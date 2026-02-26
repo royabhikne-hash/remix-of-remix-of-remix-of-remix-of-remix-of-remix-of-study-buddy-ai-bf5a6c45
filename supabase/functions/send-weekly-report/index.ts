@@ -395,6 +395,7 @@ serve(async (req) => {
       const prevWeakTopics = prevWeekTests?.[0]?.weak_subjects || [];
 
       const sessionList: SessionData[] = (sessions || []) as SessionData[];
+      const quizList: QuizData[] = (quizzes || []) as QuizData[];
       
       const totalSessions = sessionList.length;
       const totalMinutes = sessionList.reduce((acc, s) => acc + (s.time_spent || 0), 0);
