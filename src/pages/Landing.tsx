@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { BookOpen, Users, GraduationCap, MessageCircle, TrendingUp, FileText, Shield, Zap, Star, ChevronRight, Brain, BarChart3 } from "lucide-react";
+import { BookOpen, Users, GraduationCap, MessageCircle, TrendingUp, FileText, Shield, Zap, Star, ChevronRight, Brain, BarChart3, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -56,15 +56,15 @@ const Landing = () => {
 
       {/* Hero Section */}
       <section className="relative">
-        {/* Background decoration */}
         <div className="absolute inset-0 hero-gradient opacity-60" />
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
         
         <div className="container mx-auto px-4 py-16 md:py-28 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full mb-6 backdrop-blur-sm">
-              <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
+              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
               <span className="text-sm font-bold text-primary">
                 {language === 'en' ? '🚀 India\'s #1 AI Study Companion' : '🚀 India का #1 AI Study Companion'}
               </span>
@@ -85,10 +85,10 @@ const Landing = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Button variant="hero" size="xl" onClick={() => navigate("/signup")} className="shadow-xl shadow-primary/30 font-bold text-base">
+              <Button variant="hero" size="xl" onClick={() => navigate("/signup")} className="shadow-xl shadow-primary/30 font-bold text-base group">
                 <GraduationCap className="w-5 h-5" />
                 {language === 'en' ? 'Start Studying Free' : 'Free Padhai Shuru Karo'}
-                <ChevronRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button variant="hero-outline" size="xl" onClick={() => navigate("/school-login")} className="font-semibold">
                 <Users className="w-5 h-5" />
@@ -102,15 +102,15 @@ const Landing = () => {
 
             {/* Trust indicators */}
             <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50">
                 <Shield className="w-4 h-4 text-accent" />
                 <span>{language === 'en' ? 'Safe & Secure' : 'सुरक्षित'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50">
                 <Zap className="w-4 h-4 text-primary" />
                 <span>{language === 'en' ? 'Instant AI Help' : 'तुरंत AI मदद'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50">
                 <Star className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 <span>{language === 'en' ? 'CBSE, ICSE & More' : 'CBSE, ICSE और अन्य'}</span>
               </div>
@@ -121,12 +121,12 @@ const Landing = () => {
 
       {/* Stats Bar */}
       <section className="border-y border-border bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto text-center">
-            <StatItem value="5,000+" label={language === 'en' ? 'Students Ready' : 'Students'} />
-            <StatItem value="6-12" label={language === 'en' ? 'All Classes' : 'सभी Classes'} />
-            <StatItem value="4" label={language === 'en' ? 'Boards Supported' : 'Boards'} />
-            <StatItem value="24/7" label={language === 'en' ? 'AI Available' : 'AI उपलब्ध'} />
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
+            <StatItem value="5,000+" label={language === 'en' ? 'Students Ready' : 'Students'} icon={<Users className="w-5 h-5 text-primary" />} />
+            <StatItem value="6-12" label={language === 'en' ? 'All Classes' : 'सभी Classes'} icon={<BookOpen className="w-5 h-5 text-accent" />} />
+            <StatItem value="4" label={language === 'en' ? 'Boards Supported' : 'Boards'} icon={<GraduationCap className="w-5 h-5 text-primary" />} />
+            <StatItem value="24/7" label={language === 'en' ? 'AI Available' : 'AI उपलब्ध'} icon={<Zap className="w-5 h-5 text-accent" />} />
           </div>
         </div>
       </section>
@@ -134,10 +134,15 @@ const Landing = () => {
       {/* Features Section */}
       <section className="container mx-auto px-4 py-20">
         <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+          <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 px-3 py-1 rounded-full mb-4">
+            <span className="text-xs font-bold text-accent uppercase tracking-wider">
+              {language === 'en' ? 'Features' : 'Features'}
+            </span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-extrabold mb-4">
             {language === 'en' ? 'Everything You Need to ' : 'वो सब जो '}<span className="gradient-text">{language === 'en' ? 'Excel' : 'सफल'}</span>{language === 'en' ? '' : ' होने के लिए चाहिए'}
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
+          <p className="text-muted-foreground max-w-xl mx-auto text-lg">
             {language === 'en' ? 'Powerful features designed for Indian students' : 'Indian students ke liye powerful features'}
           </p>
         </div>
@@ -197,12 +202,21 @@ const Landing = () => {
       {/* How It Works */}
       <section className="bg-muted/30 border-y border-border">
         <div className="container mx-auto px-4 py-20">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-center mb-14">
-            {language === 'en' ? 'How It ' : 'Kaise '}<span className="gradient-text">{language === 'en' ? 'Works' : 'Kaam Karta Hai'}</span>
-          </h2>
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1 rounded-full mb-4">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                {language === 'en' ? 'How It Works' : 'Process'}
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-extrabold">
+              {language === 'en' ? 'Start in ' : ''}<span className="gradient-text">{language === 'en' ? '4 Simple Steps' : '4 Aasan Steps'}</span>{language === 'en' ? '' : ' mein Shuru Karo'}
+            </h2>
+          </div>
           
           <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-4 gap-8">
+            <div className="grid md:grid-cols-4 gap-8 relative">
+              {/* Connection line */}
+              <div className="hidden md:block absolute top-7 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-primary/30 via-primary/50 to-primary/30" />
               <StepCard step={1} title={language === 'en' ? "Sign Up" : "Sign Up"} description={language === 'en' ? "Create account & get approved by school" : "Account banao & school se approval lo"} />
               <StepCard step={2} title={language === 'en' ? "Study Daily" : "Roz Padho"} description={language === 'en' ? "Chat with AI, ask doubts freely" : "AI se chat karo, doubts poocho"} />
               <StepCard step={3} title={language === 'en' ? "Weekly Test" : "Weekly Test"} description={language === 'en' ? "Take AI-generated adaptive test" : "AI ka smart test do har hafta"} />
@@ -212,32 +226,36 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* CTA Section */}
       <section className="container mx-auto px-4 py-20">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-center mb-4">
-          {language === 'en' ? 'Simple ' : 'Simple '}<span className="gradient-text">{language === 'en' ? 'Pricing' : 'Plans'}</span>
-        </h2>
-        <p className="text-muted-foreground text-center mb-12 max-w-lg mx-auto">
-          {language === 'en' ? 'Choose a plan that fits your needs' : 'Apni zaroorat ke hisaab se plan chuno'}
-        </p>
-        
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <PlanCard 
-            name="Starter" price="₹50" period="/month" 
-            features={["20 chats/day", "3 images/day", "Web Voice", "Weekly Test"]}
-            label={language === 'en' ? 'For Coaching Students' : 'Coaching Students ke liye'}
-          />
-          <PlanCard 
-            name="Basic" price="₹99" period="/month" 
-            features={["60 chats/day", "7 images/day", "Web Voice", "Weekly Test", "Progress Reports"]}
-            label={language === 'en' ? 'For School Students' : 'School Students ke liye'}
-            popular
-          />
-          <PlanCard 
-            name="Pro" price="₹199" period="/month" 
-            features={["100 chats/day", "15 images/day", "Premium AI Voice", "90K chars/month", "Priority Support"]}
-            label={language === 'en' ? 'For Serious Learners' : 'Serious Learners ke liye'}
-          />
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="edu-card p-10 md:p-14 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-accent/10 rounded-full blur-3xl" />
+            <div className="relative z-10">
+              <Sparkles className="w-10 h-10 text-primary mx-auto mb-4" />
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+                {language === 'en' ? 'Ready to Start Your ' : 'Apni '}<span className="gradient-text">{language === 'en' ? 'Journey?' : 'Journey Shuru Karo!'}</span>
+              </h2>
+              <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
+                {language === 'en' 
+                  ? 'Join thousands of students already improving their grades with AI-powered learning.'
+                  : 'Hazaaron students AI ke saath apne grades sudhar rahe hain. Tum bhi shuru karo!'}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button variant="hero" size="xl" onClick={() => navigate("/signup")} className="shadow-xl shadow-primary/30 font-bold text-base group">
+                  <GraduationCap className="w-5 h-5" />
+                  {language === 'en' ? 'Get Started Free' : 'Free Shuru Karo'}
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                <Button variant="hero-outline" size="xl" onClick={() => navigate("/schools")} className="font-semibold">
+                  <Users className="w-5 h-5" />
+                  {language === 'en' ? 'Browse Schools' : 'Schools Dekho'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -249,6 +267,11 @@ const Landing = () => {
               <img src="/logo.png" alt="Study Buddy AI" className="w-8 h-8 rounded-lg object-contain" />
               <span className="font-bold">Study Buddy AI</span>
             </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <button onClick={() => navigate("/terms")} className="hover:text-foreground transition-colors">
+                {language === 'en' ? 'Terms & Conditions' : 'नियम और शर्तें'}
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground">
               © 2025 Study Buddy AI. Making education better for every student.
             </p>
@@ -259,8 +282,11 @@ const Landing = () => {
   );
 };
 
-const StatItem = ({ value, label }: { value: string; label: string }) => (
-  <div>
+const StatItem = ({ value, label, icon }: { value: string; label: string; icon: React.ReactNode }) => (
+  <div className="flex flex-col items-center gap-2">
+    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-1">
+      {icon}
+    </div>
     <p className="text-2xl md:text-3xl font-extrabold text-primary">{value}</p>
     <p className="text-sm text-muted-foreground font-medium">{label}</p>
   </div>
@@ -275,8 +301,8 @@ const FeatureCard = React.forwardRef<HTMLDivElement, { icon: React.ReactNode; ti
     };
     
     return (
-      <div ref={ref} className="edu-card p-6 hover:-translate-y-1 transition-all duration-300 group">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 border ${colorClasses[color]} group-hover:scale-110 transition-transform`}>
+      <div ref={ref} className="edu-card p-6 hover:-translate-y-1.5 hover:shadow-lg transition-all duration-300 group">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 border ${colorClasses[color]} group-hover:scale-110 transition-transform duration-300`}>
           {icon}
         </div>
         <h3 className="text-lg font-bold mb-2">{title}</h3>
@@ -289,8 +315,8 @@ FeatureCard.displayName = "FeatureCard";
 
 const StepCard = React.forwardRef<HTMLDivElement, { step: number; title: string; description: string }>(
   ({ step, title, description }, ref) => (
-    <div ref={ref} className="text-center group">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground flex items-center justify-center mx-auto mb-4 font-extrabold text-xl shadow-lg shadow-primary/25 group-hover:scale-110 transition-transform">
+    <div ref={ref} className="text-center group relative z-10">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground flex items-center justify-center mx-auto mb-4 font-extrabold text-xl shadow-lg shadow-primary/25 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-primary/30 transition-all duration-300">
         {step}
       </div>
       <h3 className="font-bold mb-1.5">{title}</h3>
@@ -299,36 +325,5 @@ const StepCard = React.forwardRef<HTMLDivElement, { step: number; title: string;
   )
 );
 StepCard.displayName = "StepCard";
-
-const PlanCard = ({ name, price, period, features, label, popular }: { 
-  name: string; price: string; period: string; features: string[]; label: string; popular?: boolean 
-}) => (
-  <div className={`edu-card p-6 relative ${popular ? 'border-primary/50 shadow-lg shadow-primary/10 ring-1 ring-primary/20' : ''}`}>
-    {popular && (
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-        <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-md">POPULAR</span>
-      </div>
-    )}
-    <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{label}</p>
-    <h3 className="text-xl font-extrabold mb-1">{name}</h3>
-    <div className="mb-4">
-      <span className="text-3xl font-extrabold text-primary">{price}</span>
-      <span className="text-muted-foreground text-sm">{period}</span>
-    </div>
-    <ul className="space-y-2.5 mb-6">
-      {features.map((f, i) => (
-        <li key={i} className="flex items-center gap-2 text-sm">
-          <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3 h-3 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-          </div>
-          <span className="text-foreground">{f}</span>
-        </li>
-      ))}
-    </ul>
-    <Button variant={popular ? "hero" : "outline"} className="w-full font-semibold" onClick={() => {}}>
-      Get Started
-    </Button>
-  </div>
-);
 
 export default Landing;
