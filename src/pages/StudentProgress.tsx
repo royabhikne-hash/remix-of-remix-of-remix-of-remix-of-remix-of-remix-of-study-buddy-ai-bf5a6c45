@@ -188,26 +188,34 @@ const StudentProgress = () => {
 
   // Subject performance from weekly tests
   const getSubjectPerformance = () => {
-    const subjectStats: Record<string, { correct: number; total: number; tests: number }> = {};
-    // We don't have per-subject scores in weekly_tests directly, but we have strong/weak
-    // Use subjects_tested frequency + strong/weak classification
+    const subjectStats: Record<string, { strong: number; weak: number; neutral: number; tests: number }> = {};
     weeklyTests.forEach(test => {
       (test.subjects_tested || []).forEach(sub => {
-        if (!subjectStats[sub]) subjectStats[sub] = { correct: 0, total: 0, tests: 0 };
+        if (!subjectStats[sub]) subjectStats[sub] = { strong: 0, weak: 0, neutral: 0, tests: 0 };
         subjectStats[sub].tests++;
         if ((test.strong_subjects || []).includes(sub)) {
-          subjectStats[sub].correct++;
+          subjectStats[sub].strong++;
+        } else if ((test.weak_subjects || []).includes(sub)) {
+          subjectStats[sub].weak++;
+        } else {
+          subjectStats[sub].neutral++;
         }
-        subjectStats[sub].total++;
       });
     });
 
     return Object.entries(subjectStats)
-      .map(([subject, data]) => ({
-        subject: subject.length > 12 ? subject.slice(0, 12) + "..." : subject,
-        score: data.tests > 0 ? Math.round((data.correct / data.total) * 100) : 0,
-        tests: data.tests,
-      }))
+      .map(([subject, data]) => {
+        // Score: strong=100%, neutral=50%, weak=0% weighted average
+        const totalClassified = data.strong + data.weak + data.neutral;
+        const score = totalClassified > 0 
+          ? Math.round(((data.strong * 100) + (data.neutral * 50)) / totalClassified) 
+          : 0;
+        return {
+          subject: subject.length > 12 ? subject.slice(0, 12) + "..." : subject,
+          score,
+          tests: data.tests,
+        };
+      })
       .sort((a, b) => b.tests - a.tests)
       .slice(0, 8);
   };

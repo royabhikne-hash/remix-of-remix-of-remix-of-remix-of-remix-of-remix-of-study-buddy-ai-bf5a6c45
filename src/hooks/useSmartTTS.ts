@@ -101,8 +101,8 @@ export const useSmartTTS = (studentId: string | null) => {
       }
       const sub = data?.subscription;
       const plan = sub?.plan || 'basic';
-      const ttsUsed = sub?.tts_used || 0;
-      const ttsLimit = sub?.tts_limit || 150000;
+      const ttsUsed = sub?.tts_used ?? 0;
+      const ttsLimit = sub?.tts_limit ?? (plan === 'pro' ? 90000 : 0);
       const isActive = sub?.is_active ?? true;
       const isExpired = sub?.end_date && new Date(sub.end_date) < new Date();
       const canUsePremium = plan === 'pro' && isActive && !isExpired && ttsUsed < ttsLimit;

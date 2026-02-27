@@ -489,7 +489,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() && !selectedImage) return;
+    if ((!inputValue.trim() && !selectedImage) || isLoading) return;
 
     // Check daily usage limits BEFORE sending
     if (studentId) {
