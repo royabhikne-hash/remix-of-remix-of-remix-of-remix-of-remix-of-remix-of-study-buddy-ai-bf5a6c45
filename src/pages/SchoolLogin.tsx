@@ -78,88 +78,101 @@ const SchoolLogin = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("secure-auth", {
-        body: {
-          action: "login",
-          userType: "school",
-          identifier: schoolId.trim(),
-          password: password,
-        },
-      });
-
-      if (error) {
-        console.error("Function invoke error:", error);
-        toast({
-          title: t('msg.error'),
-          description: "Server error. Please try again.",
-          variant: "destructive",
+    const tryLogin = async (attempt = 1): Promise<void> => {
+      try {
+        const { data, error } = await supabase.functions.invoke("secure-auth", {
+          body: {
+            action: "login",
+            userType: "school",
+            identifier: schoolId.trim(),
+            password: password,
+          },
         });
-        setIsLoading(false);
-        return;
-      }
 
-      if (data?.rateLimited) {
-        setRateLimitWait(data.waitSeconds);
-        toast({
-          title: "Too Many Attempts",
-          description: `Please wait ${Math.ceil(data.waitSeconds / 60)} minutes before trying again.`,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      if (data?.error) {
-        toast({
-          title: t('msg.error'),
-          description: data.error,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      if (data?.success) {
-        localStorage.setItem("userType", "school");
-        localStorage.setItem("schoolId", data.user.schoolId);
-        localStorage.setItem("schoolUUID", data.user.id);
-        localStorage.setItem("schoolName", data.user.name);
-        localStorage.setItem("schoolSessionToken", data.sessionToken);
-
-        if (data.requiresPasswordReset) {
-          setSessionToken(data.sessionToken);
-          setRequiresPasswordReset(true);
+        if (error) {
+          if (attempt === 1) {
+            console.warn("School login attempt 1 failed, retrying...", error);
+            await new Promise(r => setTimeout(r, 1500));
+            return tryLogin(2);
+          }
+          console.error("Function invoke error:", error);
           toast({
-            title: t('auth.passwordResetRequired'),
-            description: t('auth.mustResetPassword'),
+            title: t('msg.error'),
+            description: "Server se connect nahi ho pa raha. Internet check karein.",
+            variant: "destructive",
           });
           setIsLoading(false);
           return;
         }
-        
-        toast({
-          title: t('dashboard.welcome') + "!",
-          description: "School dashboard access granted.",
-        });
-        navigate("/school-dashboard");
-      } else {
+
+        if (data?.rateLimited) {
+          setRateLimitWait(data.waitSeconds);
+          toast({
+            title: "Too Many Attempts",
+            description: `Please wait ${Math.ceil(data.waitSeconds / 60)} minutes before trying again.`,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.error) {
+          toast({
+            title: t('msg.error'),
+            description: data.error,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.success) {
+          localStorage.setItem("userType", "school");
+          localStorage.setItem("schoolId", data.user.schoolId);
+          localStorage.setItem("schoolUUID", data.user.id);
+          localStorage.setItem("schoolName", data.user.name);
+          localStorage.setItem("schoolSessionToken", data.sessionToken);
+
+          if (data.requiresPasswordReset) {
+            setSessionToken(data.sessionToken);
+            setRequiresPasswordReset(true);
+            toast({
+              title: t('auth.passwordResetRequired'),
+              description: t('auth.mustResetPassword'),
+            });
+            setIsLoading(false);
+            return;
+          }
+          
+          toast({
+            title: t('dashboard.welcome') + "!",
+            description: "School dashboard access granted.",
+          });
+          navigate("/school-dashboard");
+        } else {
+          toast({
+            title: t('msg.error'),
+            description: "Login failed. Please check credentials.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Login error:", error);
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 1500));
+          return tryLogin(2);
+        }
         toast({
           title: t('msg.error'),
-          description: "Login failed. Please check credentials.",
+          description: "Server se connect nahi ho pa raha. Internet check karein.",
           variant: "destructive",
         });
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast({
-        title: t('msg.error'),
-        description: "An error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    await tryLogin();
   };
 
   return (

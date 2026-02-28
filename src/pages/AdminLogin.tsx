@@ -79,77 +79,101 @@ const AdminLogin = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("secure-auth", {
-        body: {
-          action: "login",
-          userType: "admin",
-          identifier: adminId.trim(),
-          password: password,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.rateLimited) {
-        setRateLimitWait(data.waitSeconds);
-        toast({
-          title: "Too Many Attempts",
-          description: `Please wait ${Math.ceil(data.waitSeconds / 60)} minutes before trying again.`,
-          variant: "destructive",
+    const tryLogin = async (attempt = 1): Promise<void> => {
+      try {
+        const { data, error } = await supabase.functions.invoke("secure-auth", {
+          body: {
+            action: "login",
+            userType: "admin",
+            identifier: adminId.trim(),
+            password: password,
+          },
         });
-        setIsLoading(false);
-        return;
-      }
 
-      if (data.error) {
-        toast({
-          title: "Invalid Credentials",
-          description: data.error,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.success) {
-        // Store session securely - only session token needed
-        localStorage.setItem("userType", "admin");
-        localStorage.setItem("adminId", data.user.id);
-        localStorage.setItem("adminName", data.user.name);
-        localStorage.setItem("adminRole", data.user.role);
-        localStorage.setItem("adminSessionToken", data.sessionToken);
-
-        // Check if password reset is required
-        if (data.requiresPasswordReset) {
-          setSessionToken(data.sessionToken);
-          setRequiresPasswordReset(true);
+        if (error) {
+          // Retry once on network/transient errors
+          if (attempt === 1) {
+            console.warn("Admin login attempt 1 failed, retrying...", error);
+            await new Promise(r => setTimeout(r, 1500));
+            return tryLogin(2);
+          }
           toast({
-            title: t('auth.passwordResetRequired'),
-            description: t('auth.mustResetPassword'),
+            title: t('msg.error'),
+            description: "Server se connect nahi ho pa raha. Internet check karein aur retry karein.",
+            variant: "destructive",
           });
           setIsLoading(false);
           return;
         }
-        
+
+        if (data?.rateLimited) {
+          setRateLimitWait(data.waitSeconds);
+          toast({
+            title: "Too Many Attempts",
+            description: `Please wait ${Math.ceil(data.waitSeconds / 60)} minutes before trying again.`,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.error) {
+          toast({
+            title: "Invalid Credentials",
+            description: data.error,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.success) {
+          localStorage.setItem("userType", "admin");
+          localStorage.setItem("adminId", data.user.id);
+          localStorage.setItem("adminName", data.user.name);
+          localStorage.setItem("adminRole", data.user.role);
+          localStorage.setItem("adminSessionToken", data.sessionToken);
+
+          if (data.requiresPasswordReset) {
+            setSessionToken(data.sessionToken);
+            setRequiresPasswordReset(true);
+            toast({
+              title: t('auth.passwordResetRequired'),
+              description: t('auth.mustResetPassword'),
+            });
+            setIsLoading(false);
+            return;
+          }
+          
+          toast({
+            title: t('dashboard.welcome') + " Admin!",
+            description: "Admin dashboard access granted.",
+          });
+          navigate("/admin-dashboard");
+        } else {
+          toast({
+            title: t('msg.error'),
+            description: "Login failed. Please check credentials.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Login error:", error);
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 1500));
+          return tryLogin(2);
+        }
         toast({
-          title: t('dashboard.welcome') + " Admin!",
-          description: "Admin dashboard access granted.",
+          title: t('msg.error'),
+          description: "Server se connect nahi ho pa raha. Internet check karein.",
+          variant: "destructive",
         });
-        navigate("/admin-dashboard");
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast({
-        title: t('msg.error'),
-        description: "An error occurred. Please try again.",
-        variant: "destructive",
-      });
-    }
-    
-    setIsLoading(false);
+    };
+
+    await tryLogin();
   };
 
   return (
