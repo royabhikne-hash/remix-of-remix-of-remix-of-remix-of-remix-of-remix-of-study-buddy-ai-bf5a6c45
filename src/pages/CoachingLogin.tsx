@@ -58,47 +58,59 @@ const CoachingLogin = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("manage-coaching", {
-        body: { action: "coaching_login", identifier: coachingId.trim(), password },
-      });
+    const tryLogin = async (attempt = 1): Promise<void> => {
+      try {
+        const { data, error } = await supabase.functions.invoke("manage-coaching", {
+          body: { action: "coaching_login", identifier: coachingId.trim(), password },
+        });
 
-      if (error) {
-        toast({ title: "Error", description: "Server error. Please try again.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-
-      if (data?.error) {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-
-      if (data?.success) {
-        localStorage.setItem("userType", "coaching");
-        localStorage.setItem("schoolId", data.user.coachingId);
-        localStorage.setItem("schoolUUID", data.user.id);
-        localStorage.setItem("schoolName", data.user.name);
-        localStorage.setItem("schoolSessionToken", data.sessionToken);
-        localStorage.setItem("coachingSessionToken", data.sessionToken);
-
-        if (data.requiresPasswordReset) {
-          setSessionToken(data.sessionToken);
-          setRequiresPasswordReset(true);
-          toast({ title: "Password Reset Required", description: "Please set a new password." });
+        if (error) {
+          if (attempt === 1) {
+            console.warn("Coaching login attempt 1 failed, retrying...", error);
+            await new Promise(r => setTimeout(r, 1500));
+            return tryLogin(2);
+          }
+          toast({ title: "Error", description: "Server se connect nahi ho pa raha. Internet check karein.", variant: "destructive" });
           setIsLoading(false);
           return;
         }
 
-        toast({ title: "Welcome!", description: "Coaching dashboard access granted." });
-        navigate("/school-dashboard");
+        if (data?.error) {
+          toast({ title: "Error", description: data.error, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.success) {
+          localStorage.setItem("userType", "coaching");
+          localStorage.setItem("schoolId", data.user.coachingId);
+          localStorage.setItem("schoolUUID", data.user.id);
+          localStorage.setItem("schoolName", data.user.name);
+          localStorage.setItem("schoolSessionToken", data.sessionToken);
+          localStorage.setItem("coachingSessionToken", data.sessionToken);
+
+          if (data.requiresPasswordReset) {
+            setSessionToken(data.sessionToken);
+            setRequiresPasswordReset(true);
+            toast({ title: "Password Reset Required", description: "Please set a new password." });
+            setIsLoading(false);
+            return;
+          }
+
+          toast({ title: "Welcome!", description: "Coaching dashboard access granted." });
+          navigate("/school-dashboard");
+        }
+      } catch (error) {
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 1500));
+          return tryLogin(2);
+        }
+        toast({ title: "Error", description: "Server se connect nahi ho pa raha.", variant: "destructive" });
+        setIsLoading(false);
       }
-    } catch (error) {
-      toast({ title: "Error", description: "An error occurred.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    await tryLogin();
   };
 
   return (

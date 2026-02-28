@@ -70,79 +70,101 @@ const Login = () => {
     
     setIsLoading(true);
 
-    try {
-      const { error } = await signIn(email, password);
-      
-      if (!mountedRef.current) return;
-      
-      if (error) {
-        const msg = error.message || "";
+    const trySignIn = async (attempt = 1): Promise<void> => {
+      try {
+        const { error } = await signIn(email, password);
         
-        // Ignore transient WebView/abort errors silently
-        const isTransient = msg.includes('signal is aborted') || 
-                           msg.includes('AbortError') ||
-                           msg.includes('LockManager') ||
-                           msg.includes('timed out');
+        if (!mountedRef.current) return;
         
-        if (isTransient) {
-          // Just wait a bit and check if we're actually logged in now
-          await new Promise(r => setTimeout(r, 1000));
-          if (!mountedRef.current) return;
-          const { data } = await supabase.auth.getSession();
-          if (data.session) {
-            // Actually logged in, proceed
-            await checkApprovalAndNavigate(data.session.user.id);
+        if (error) {
+          const msg = error.message || "";
+          
+          // Transient WebView/network errors - retry automatically
+          const isTransient = msg.includes('signal is aborted') || 
+                             msg.includes('AbortError') ||
+                             msg.includes('LockManager') ||
+                             msg.includes('timed out') ||
+                             msg.includes('Failed to fetch') ||
+                             msg.includes('NetworkError') ||
+                             msg.includes('network');
+          
+          if (isTransient) {
+            // Wait and check if actually logged in
+            await new Promise(r => setTimeout(r, 1500));
+            if (!mountedRef.current) return;
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              await checkApprovalAndNavigate(data.session.user.id);
+              return;
+            }
+            // Retry once on transient errors
+            if (attempt === 1) {
+              console.warn("Student login attempt 1 failed (transient), retrying...");
+              return trySignIn(2);
+            }
+            setIsLoading(false);
             return;
           }
-          // Not logged in, just reset - don't show error for transient issues
+          
+          if (msg.includes("Invalid login credentials")) {
+            toast({
+              title: language === 'en' ? "Login Failed" : "लॉगिन फेल",
+              description: language === 'en' ? "Invalid email or password." : "गलत ईमेल या पासवर्ड।",
+              variant: "destructive",
+            });
+          } else if (msg.includes("Email not confirmed")) {
+            toast({
+              title: language === 'en' ? "Email Not Verified" : "ईमेल वेरिफाई नहीं हुआ",
+              description: language === 'en' ? "Please check your email and click the verification link." : "कृपया अपना ईमेल चेक करें।",
+              variant: "destructive",
+            });
+          } else {
+            // Retry once for unknown errors before showing repair button
+            if (attempt === 1) {
+              console.warn("Student login attempt 1 failed, retrying...", msg);
+              await new Promise(r => setTimeout(r, 1500));
+              return trySignIn(2);
+            }
+            setShowAuthRepair(true);
+            toast({
+              title: language === 'en' ? "Login Failed" : "लॉगिन फेल",
+              description: msg || "Please try again.",
+              variant: "destructive",
+            });
+          }
           setIsLoading(false);
           return;
         }
-        
-        if (msg.includes("Invalid login credentials")) {
-          toast({
-            title: language === 'en' ? "Login Failed" : "लॉगिन फेल",
-            description: language === 'en' ? "Invalid email or password." : "गलत ईमेल या पासवर्ड।",
-            variant: "destructive",
-          });
-        } else if (msg.includes("Email not confirmed")) {
-          toast({
-            title: language === 'en' ? "Email Not Verified" : "ईमेल वेरिफाई नहीं हुआ",
-            description: language === 'en' ? "Please check your email and click the verification link." : "कृपया अपना ईमेल चेक करें।",
-            variant: "destructive",
-          });
-        } else {
-          setShowAuthRepair(true);
-          toast({
-            title: language === 'en' ? "Login Failed" : "लॉगिन फेल",
-            description: msg || "Please try again.",
-            variant: "destructive",
-          });
-        }
-        setIsLoading(false);
-        return;
-      }
 
-      // Login succeeded - check approval
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!mountedRef.current) return;
-      
-      if (currentUser) {
-        await checkApprovalAndNavigate(currentUser.id);
-      } else {
+        // Login succeeded - check approval
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!mountedRef.current) return;
+        
+        if (currentUser) {
+          await checkApprovalAndNavigate(currentUser.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        if (!mountedRef.current) return;
+        console.error("Login error:", error);
+        // Retry once on catch errors
+        if (attempt === 1) {
+          console.warn("Student login catch, retrying...");
+          await new Promise(r => setTimeout(r, 1500));
+          return trySignIn(2);
+        }
+        setShowAuthRepair(true);
+        toast({
+          title: language === 'en' ? "Login Failed" : "लॉगिन फेल",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
         setIsLoading(false);
       }
-    } catch (error) {
-      if (!mountedRef.current) return;
-      console.error("Login error:", error);
-      setShowAuthRepair(true);
-      toast({
-        title: language === 'en' ? "Login Failed" : "लॉगिन फेल",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-    }
+    };
+
+    await trySignIn();
   };
 
   const checkApprovalAndNavigate = async (userId: string) => {
