@@ -548,7 +548,7 @@ serve(async (req) => {
         // Generate or fetch parent access token for parent dashboard link
         let parentLink = "";
         try {
-          const { data: existingToken } = await supabase
+          const { data: existingToken, error: tokenFetchErr } = await supabase
             .from("parent_access_tokens")
             .select("token")
             .eq("student_id", student.id)
@@ -556,22 +556,35 @@ serve(async (req) => {
             .limit(1)
             .maybeSingle();
 
+          if (tokenFetchErr) {
+            console.error("Error fetching parent token:", tokenFetchErr);
+          }
+
           if (existingToken?.token) {
             parentLink = `https://studybuddyaiapp.lovable.app/parent-view?token=${existingToken.token}`;
+            console.log("Using existing parent token for", student.full_name);
           } else {
             // Create a new parent access token
-            const { data: newToken } = await supabase
+            const { data: newToken, error: tokenCreateErr } = await supabase
               .from("parent_access_tokens")
               .insert({ student_id: student.id })
               .select("token")
               .single();
+            
+            if (tokenCreateErr) {
+              console.error("Error creating parent token:", tokenCreateErr);
+            }
+            
             if (newToken?.token) {
               parentLink = `https://studybuddyaiapp.lovable.app/parent-view?token=${newToken.token}`;
+              console.log("Created new parent token for", student.full_name);
             }
           }
         } catch (e) {
           console.error("Error generating parent link:", e);
         }
+        
+        console.log("Parent link for", student.full_name, ":", parentLink || "NONE");
 
         const language = body.language || "hi";
         let message = generateWhatsAppMessage(report, language);
