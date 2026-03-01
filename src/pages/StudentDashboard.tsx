@@ -422,25 +422,25 @@ const StudentDashboard = () => {
           {isRejected ? (
             <>
               <p className="text-muted-foreground mb-4">
-                Aapki registration <strong>{schoolName}</strong> ne reject kar di hai.
+                Your registration has been rejected by <strong>{schoolName}</strong>.
               </p>
               <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 mb-6">
                 <p className="text-sm font-medium text-destructive mb-1">Rejection Reason:</p>
                 <p className="text-sm text-foreground">{rejectionReason}</p>
               </div>
               <p className="text-sm text-muted-foreground mb-6">
-                Agar aapko lagta hai ye galti se hua hai, toh school se contact karo.
+                If you think this was a mistake, please contact your school.
               </p>
             </>
           ) : (
             <>
               <p className="text-muted-foreground mb-6">
-                Aapka account abhi <strong>{schoolName}</strong> se approve hona baaki hai. 
-                Jab school aapko approve kar dega, tab aap study kar paoge.
+                Your account is pending approval from <strong>{schoolName}</strong>. 
+                Once approved, you can start studying.
               </p>
               <div className="bg-secondary/50 rounded-xl p-4 mb-6">
                 <p className="text-sm text-muted-foreground">
-                  🔔 School ko inform kar diya gaya hai. Thoda wait karo!
+                  🔔 Your school has been notified. Please wait!
                 </p>
               </div>
             </>

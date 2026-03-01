@@ -66,7 +66,7 @@ const Landing = () => {
             <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full mb-6 backdrop-blur-sm">
               <Sparkles className="w-4 h-4 text-primary animate-pulse" />
               <span className="text-sm font-bold text-primary">
-                {language === 'en' ? '🚀 India\'s #1 AI Study Companion' : '🚀 India का #1 AI Study Companion'}
+                {language === 'en' ? '🚀 India\'s #1 AI Study Companion' : '🚀 India ka #1 AI Study Companion'}
               </span>
             </div>
             
@@ -74,7 +74,7 @@ const Landing = () => {
               {language === 'en' ? (
                 <>Your Personal<br /><span className="gradient-text">AI Study Buddy</span><br />is Here</>
               ) : (
-                <>तेरा Personal<br /><span className="gradient-text">AI Study Buddy</span><br />आ गया</>
+                <>Tera Personal<br /><span className="gradient-text">AI Study Buddy</span><br />Aa Gaya</>
               )}
             </h1>
             
@@ -104,15 +104,15 @@ const Landing = () => {
             <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50">
                 <Shield className="w-4 h-4 text-accent" />
-                <span>{language === 'en' ? 'Safe & Secure' : 'सुरक्षित'}</span>
+                <span>{language === 'en' ? 'Safe & Secure' : 'Safe & Secure'}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50">
                 <Zap className="w-4 h-4 text-primary" />
-                <span>{language === 'en' ? 'Instant AI Help' : 'तुरंत AI मदद'}</span>
+                <span>{language === 'en' ? 'Instant AI Help' : 'Turant AI Help'}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50">
                 <Star className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-                <span>{language === 'en' ? 'CBSE, ICSE & More' : 'CBSE, ICSE और अन्य'}</span>
+                <span>{language === 'en' ? 'CBSE, ICSE & More' : 'CBSE, ICSE & More'}</span>
               </div>
             </div>
           </div>
@@ -123,10 +123,10 @@ const Landing = () => {
       <section className="border-y border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
-            <StatItem value="5,000+" label={language === 'en' ? 'Students Ready' : 'Students'} icon={<Users className="w-5 h-5 text-primary" />} />
-            <StatItem value="6-12" label={language === 'en' ? 'All Classes' : 'सभी Classes'} icon={<BookOpen className="w-5 h-5 text-accent" />} />
-            <StatItem value="4" label={language === 'en' ? 'Boards Supported' : 'Boards'} icon={<GraduationCap className="w-5 h-5 text-primary" />} />
-            <StatItem value="24/7" label={language === 'en' ? 'AI Available' : 'AI उपलब्ध'} icon={<Zap className="w-5 h-5 text-accent" />} />
+            <StatItem value="5,000+" label={language === 'en' ? 'Students Ready' : 'Students Ready'} icon={<Users className="w-5 h-5 text-primary" />} />
+            <StatItem value="6-12" label={language === 'en' ? 'All Classes' : 'All Classes'} icon={<BookOpen className="w-5 h-5 text-accent" />} />
+            <StatItem value="4" label={language === 'en' ? 'Boards Supported' : 'Boards Supported'} icon={<GraduationCap className="w-5 h-5 text-primary" />} />
+            <StatItem value="24/7" label={language === 'en' ? 'AI Available' : 'AI Available'} icon={<Zap className="w-5 h-5 text-accent" />} />
           </div>
         </div>
       </section>
@@ -140,7 +140,7 @@ const Landing = () => {
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-extrabold mb-4">
-            {language === 'en' ? 'Everything You Need to ' : 'वो सब जो '}<span className="gradient-text">{language === 'en' ? 'Excel' : 'सफल'}</span>{language === 'en' ? '' : ' होने के लिए चाहिए'}
+            {language === 'en' ? 'Everything You Need to ' : 'Wo Sab Jo '}<span className="gradient-text">{language === 'en' ? 'Excel' : 'Success'}</span>{language === 'en' ? '' : ' ke Liye Chahiye'}
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto text-lg">
             {language === 'en' ? 'Powerful features designed for Indian students' : 'Indian students ke liye powerful features'}
@@ -209,7 +209,7 @@ const Landing = () => {
               </span>
             </div>
             <h2 className="text-3xl md:text-5xl font-extrabold">
-              {language === 'en' ? 'Start in ' : ''}<span className="gradient-text">{language === 'en' ? '4 Simple Steps' : '4 Aasan Steps'}</span>{language === 'en' ? '' : ' mein Shuru Karo'}
+              {language === 'en' ? 'Start in ' : ''}<span className="gradient-text">{language === 'en' ? '4 Simple Steps' : '4 Easy Steps'}</span>{language === 'en' ? '' : ' mein Shuru Karo'}
             </h2>
           </div>
           
@@ -220,7 +220,7 @@ const Landing = () => {
               <StepCard step={1} title={language === 'en' ? "Sign Up" : "Sign Up"} description={language === 'en' ? "Create account & get approved by school" : "Account banao & school se approval lo"} />
               <StepCard step={2} title={language === 'en' ? "Study Daily" : "Roz Padho"} description={language === 'en' ? "Chat with AI, ask doubts freely" : "AI se chat karo, doubts poocho"} />
               <StepCard step={3} title={language === 'en' ? "Weekly Test" : "Weekly Test"} description={language === 'en' ? "Take AI-generated adaptive test" : "AI ka smart test do har hafta"} />
-              <StepCard step={4} title={language === 'en' ? "Track Growth" : "Growth Dekho"} description={language === 'en' ? "See WPS score & improve" : "WPS score dekho aur sudhaaro"} />
+              <StepCard step={4} title={language === 'en' ? "Track Growth" : "Growth Dekho"} description={language === 'en' ? "See WPS score & improve" : "WPS score dekho aur sudharo"} />
             </div>
           </div>
         </div>
@@ -269,7 +269,7 @@ const Landing = () => {
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <button onClick={() => navigate("/terms")} className="hover:text-foreground transition-colors">
-                {language === 'en' ? 'Terms & Conditions' : 'नियम और शर्तें'}
+                {language === 'en' ? 'Terms & Conditions' : 'Terms & Conditions'}
               </button>
             </div>
             <p className="text-sm text-muted-foreground">
