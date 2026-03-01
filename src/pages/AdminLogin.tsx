@@ -99,7 +99,7 @@ const AdminLogin = () => {
           }
           toast({
             title: t('msg.error'),
-            description: "Server se connect nahi ho pa raha. Internet check karein aur retry karein.",
+            description: "Could not connect to server. Please check your internet and try again.",
             variant: "destructive",
           });
           setIsLoading(false);
@@ -166,7 +166,7 @@ const AdminLogin = () => {
         }
         toast({
           title: t('msg.error'),
-          description: "Server se connect nahi ho pa raha. Internet check karein.",
+          description: "Could not connect to server. Please check your internet.",
           variant: "destructive",
         });
         setIsLoading(false);

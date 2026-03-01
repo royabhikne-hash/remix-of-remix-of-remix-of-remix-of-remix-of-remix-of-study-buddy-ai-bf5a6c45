@@ -70,7 +70,7 @@ const CoachingLogin = () => {
             await new Promise(r => setTimeout(r, 1500));
             return tryLogin(2);
           }
-          toast({ title: "Error", description: "Server se connect nahi ho pa raha. Internet check karein.", variant: "destructive" });
+          toast({ title: "Error", description: "Could not connect to server. Please check your internet.", variant: "destructive" });
           setIsLoading(false);
           return;
         }
@@ -105,7 +105,7 @@ const CoachingLogin = () => {
           await new Promise(r => setTimeout(r, 1500));
           return tryLogin(2);
         }
-        toast({ title: "Error", description: "Server se connect nahi ho pa raha.", variant: "destructive" });
+        toast({ title: "Error", description: "Could not connect to server. Please check your internet.", variant: "destructive" });
         setIsLoading(false);
       }
     };

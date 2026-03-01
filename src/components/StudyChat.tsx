@@ -120,7 +120,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     {
       id: "1",
       role: "assistant",
-      content: "Namaste! Main aapka Study Buddy hun! 📚 Kuch bhi padhai se related pucho - Math, Science, Hindi, English, Social Studies - jo bhi doubt ho, main help karunga! Bolo, kya padhna hai aaj?",
+      content: "Hey there! I'm your Study Buddy! 📚 Ask me anything about Math, Science, Hindi, English, Social Studies - whatever doubt you have, I'll help you out! So, what do you want to study today?",
       timestamp: new Date(),
     },
   ]);
@@ -232,13 +232,13 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         if (event.error === 'not-allowed') {
           toast({
             title: "Microphone Access Denied",
-            description: "Microphone use karne ke liye permission do.",
+            description: "Please allow microphone access to use voice input.",
             variant: "destructive"
           });
         } else if (event.error === 'no-speech') {
           toast({
-            title: "Kuch sunai nahi diya",
-            description: "Phir se bolke try karo.",
+            title: "No Speech Detected",
+            description: "Please try speaking again.",
           });
         }
       };
@@ -253,7 +253,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     if (!recognitionRef.current) {
       toast({
         title: "Not Supported",
-        description: "Aapka browser voice input support nahi karta. Chrome use karo.",
+        description: "Your browser doesn't support voice input. Please use Chrome.",
         variant: "destructive"
       });
       return;
@@ -274,15 +274,15 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         recognitionRef.current.start();
         setIsListening(true);
         toast({
-          title: "🎤 Bol raha hun...",
-          description: "Ab bolo - main sun raha hun!",
+          title: "🎤 Listening...",
+          description: "Go ahead, I'm listening!",
           duration: 2000
         });
       } catch (error) {
         console.error('Error starting recognition:', error);
         toast({
           title: "Error",
-          description: "Voice input start nahi ho paya. Refresh karke try karo.",
+          description: "Could not start voice input. Please refresh and try again.",
           variant: "destructive"
         });
       }
@@ -337,7 +337,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   // Robust TTS function with error handling & no silent failure
   const speakText = useCallback(async (text: string, messageId: string, isQuizQuestion: boolean = false) => {
     if (!ttsSupported) {
-      toast({ title: "Voice Not Available", description: "Is device pe voice support nahi hai.", variant: "destructive", duration: 2000 });
+      toast({ title: "Voice Not Available", description: "Voice is not supported on this device.", variant: "destructive", duration: 2000 });
       return;
     }
 
@@ -370,7 +370,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       console.error("TTS error:", error);
       toast({
         title: "Voice Error",
-        description: "Voice playback mein problem hui. Try again!",
+        description: "Voice playback had an issue. Try again!",
         variant: "destructive",
         duration: 2000
       });
@@ -425,10 +425,10 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         }));
       }
 
-      return data?.response || "Sorry bhai, kuch problem ho gaya. Phir se try kar!";
+      return data?.response || "Sorry, something went wrong. Please try again!";
     } catch (err) {
       console.error("AI response error:", err);
-      return "Oops! Connection mein problem hai. Thodi der baad try karo! 🙏";
+      return "Oops! Connection issue. Please try again in a moment! 🙏";
     }
   };
 
@@ -504,7 +504,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         } else if (usageData && usageData.allowed === false) {
           toast({
             title: usageType === "image" ? "📸 Image Limit Reached!" : "💬 Chat Limit Reached!",
-            description: `Aaj ka ${usageType} limit khatam ho gaya (${usageData.currentCount}/${usageData.limit}). Plan upgrade karo for more!`,
+            description: `Today's ${usageType} limit reached (${usageData.currentCount}/${usageData.limit}). Upgrade your plan for more!`,
             variant: "destructive",
             duration: 5000,
           });
@@ -638,8 +638,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         // Adaptive intro message based on student's performance
         const hasWeakAreas = analysis.weakAreas.length > 0;
         const introMessage = hasWeakAreas 
-          ? `Achha bhai! Maine dekha tune ${analysis.weakAreas.slice(0, 2).join(" aur ")} mein thoda struggle kiya. Koi baat nahi - ye ${data.quiz.questions.length} questions tujhe is topic samajhne mein help karenge! Ready?`
-          : `Bahut badhiya padhai ki tune! Ab dekhte hain tune kitna samjha. Ye ${data.quiz.questions.length} quick questions hain - chal shuru karte hain!`;
+          ? `I noticed you struggled a bit with ${analysis.weakAreas.slice(0, 2).join(" and ")}. No worries - these ${data.quiz.questions.length} questions will help you understand the topic better! Ready?`
+          : `Great study session! Let's see how much you learned. Here are ${data.quiz.questions.length} quick questions - let's go!`;
         
         const quizIntro: ChatMessage = {
           id: Date.now().toString(),
@@ -673,8 +673,8 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
       return {
         isCorrect,
         confidence: 100,
-        reasoning: isCorrect ? "Sahi option select kiya" : "Galat option select kiya",
-        feedback: isCorrect ? "🎉 Sahi jawab!" : "❌ Galat jawab"
+        reasoning: isCorrect ? "Correct option selected" : "Wrong option selected",
+        feedback: isCorrect ? "🎉 Correct answer!" : "❌ Wrong answer"
       };
     }
 
@@ -710,7 +710,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         isCorrect,
         confidence: 70,
         reasoning: "Simple matching used",
-        feedback: isCorrect ? "🎉 Sahi jawab!" : "❌ Answer match nahi hua"
+        feedback: isCorrect ? "🎉 Correct answer!" : "❌ Answer didn't match"
       };
     }
   };
@@ -799,11 +799,11 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     const accuracy = Math.round((correct / total) * 100);
     
     if (understanding === "strong") {
-      return `🎉 Bahut badhiya bhai! Tune ${correct}/${total} (${accuracy}%) sahi kiye! Ye topic tera strong hai. Keep it up! ✔`;
+      return `🎉 Amazing! You got ${correct}/${total} (${accuracy}%) correct! This topic is your strength. Keep it up! ✔`;
     } else if (understanding === "partial") {
-      return `👍 Theek hai bhai! ${correct}/${total} (${accuracy}%) correct. Kuch concepts clear hain but thoda aur practice chahiye. Koi baat nahi, improvement aa rahi hai!`;
+      return `👍 Not bad! ${correct}/${total} (${accuracy}%) correct. Some concepts are clear but you need a bit more practice. You're improving!`;
     } else {
-      return `⚠️ Bhai ${correct}/${total} (${accuracy}%) hi sahi hue. Is topic ko dobara padhna padega. Don't worry, agli baar better karenge! 💪`;
+      return `⚠️ You got ${correct}/${total} (${accuracy}%) correct. You should revisit this topic. Don't worry, you'll do better next time! 💪`;
     }
   };
 
@@ -840,7 +840,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     const confirmMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "assistant",
-      content: `Perfect! 📖 Tune **${selectedSubject}** ka chapter **"${chapter}"** select kiya hai. Ab is chapter ke baare mein kuch bhi puch - main sirf isi chapter se related help dunga! Shuru karte hain? 🚀`,
+      content: `Perfect! 📖 You've selected **${selectedSubject}** chapter **"${chapter}"**. Ask me anything about this chapter - I'll focus my help on it! Let's begin? 🚀`,
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, confirmMessage]);
@@ -1012,7 +1012,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
             />
             {selectedSubject && !selectedChapter && (
               <p className="text-xs text-muted-foreground">
-                📖 Ab chapter select karo
+                📖 Now select a chapter
               </p>
             )}
           </div>
@@ -1262,7 +1262,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Apna jawab yahan likho..."
+                        placeholder="Type your answer here..."
                         value={shortAnswerInput}
                         onChange={(e) => setShortAnswerInput(e.target.value)}
                         onKeyPress={(e) => {
@@ -1310,7 +1310,7 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
                           <XCircle className="w-5 h-5 text-destructive" />
                         )}
                         <span className="font-medium">
-                          {answerResults[currentQuestionIndex].isCorrect ? "Sahi Jawab! 🎉" : "Galat Jawab"}
+                          {answerResults[currentQuestionIndex].isCorrect ? "Correct! 🎉" : "Wrong Answer"}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
