@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 // Send WhatsApp notification via Twilio
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       .from('students')
       .select('*')
       .eq('is_approved', true)
-      .eq('is_banned', false);
+      .or('is_banned.eq.false,is_banned.is.null');
 
     if (studentsError) {
       console.error('Error fetching students:', studentsError);
