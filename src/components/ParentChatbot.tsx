@@ -21,7 +21,7 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: `Hello! I'm Study Buddy AI's Parent Assistant. Ask me anything about ${studentName}'s study progress, performance, or how you can help them improve!`,
+      content: `Namaste! Main Study Buddy AI ka Parent Assistant hoon. Aap ${studentName} ki padhai, performance, ya kisi bhi topic ke baare mein poochh sakte hain. Hindi ya English mein poochhein!`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -142,9 +142,11 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
   };
 
   const suggestedQuestions = [
+    "Mere bachche ki performance kaisi hai?",
+    "Weak subjects kaunse hain?",
+    "Is hafte kitna padha?",
+    "Improve karne ke tips do",
     "How is my child performing?",
-    "What are the weak areas?",
-    "How many hours studied this week?",
     "Any tips to improve?",
   ];
 
@@ -174,7 +176,7 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
             <Bot className="w-5 h-5" />
             <div>
               <p className="font-semibold text-sm">Parent Assistant</p>
-              <p className="text-xs opacity-80">Ask about {studentName}</p>
+              <p className="text-xs opacity-80">{studentName} ke baare mein poochhein</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -264,7 +266,7 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Ask about your child..."
+            placeholder="Hindi ya English mein poochhein..."
             className="text-sm"
             disabled={isLoading}
           />
