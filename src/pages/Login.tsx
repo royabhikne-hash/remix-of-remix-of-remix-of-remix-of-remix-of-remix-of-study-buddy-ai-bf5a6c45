@@ -70,6 +70,18 @@ const Login = () => {
     
     setIsLoading(true);
 
+    // Global timeout - never let loading stay more than 15 seconds
+    const globalTimeout = setTimeout(() => {
+      if (mountedRef.current) {
+        setIsLoading(false);
+        toast({
+          title: language === 'en' ? "Login Timeout" : "लॉगिन टाइमआउट",
+          description: language === 'en' ? "Server took too long. Please try again." : "सर्वर ने बहुत समय लिया। कृपया फिर से कोशिश करें।",
+          variant: "destructive",
+        });
+      }
+    }, 15000);
+
     const trySignIn = async (attempt = 1): Promise<void> => {
       try {
         const { error } = await signIn(email, password);
@@ -89,23 +101,29 @@ const Login = () => {
                              msg.includes('network');
           
           if (isTransient) {
-            // Wait and check if actually logged in
             await new Promise(r => setTimeout(r, 1500));
             if (!mountedRef.current) return;
             const { data } = await supabase.auth.getSession();
             if (data.session) {
+              clearTimeout(globalTimeout);
               await checkApprovalAndNavigate(data.session.user.id);
               return;
             }
-            // Retry once on transient errors
             if (attempt === 1) {
               console.warn("Student login attempt 1 failed (transient), retrying...");
               return trySignIn(2);
             }
+            clearTimeout(globalTimeout);
             setIsLoading(false);
+            toast({
+              title: language === 'en' ? "Connection Error" : "कनेक्शन एरर",
+              description: language === 'en' ? "Could not connect to server. Check your internet." : "सर्वर से कनेक्ट नहीं हो पाया।",
+              variant: "destructive",
+            });
             return;
           }
           
+          clearTimeout(globalTimeout);
           if (msg.includes("Invalid login credentials")) {
             toast({
               title: language === 'en' ? "Login Failed" : "लॉगिन फेल",
@@ -119,7 +137,6 @@ const Login = () => {
               variant: "destructive",
             });
           } else {
-            // Retry once for unknown errors before showing repair button
             if (attempt === 1) {
               console.warn("Student login attempt 1 failed, retrying...", msg);
               await new Promise(r => setTimeout(r, 1500));
@@ -140,6 +157,7 @@ const Login = () => {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (!mountedRef.current) return;
         
+        clearTimeout(globalTimeout);
         if (currentUser) {
           await checkApprovalAndNavigate(currentUser.id);
         } else {
@@ -148,12 +166,12 @@ const Login = () => {
       } catch (error) {
         if (!mountedRef.current) return;
         console.error("Login error:", error);
-        // Retry once on catch errors
         if (attempt === 1) {
           console.warn("Student login catch, retrying...");
           await new Promise(r => setTimeout(r, 1500));
           return trySignIn(2);
         }
+        clearTimeout(globalTimeout);
         setShowAuthRepair(true);
         toast({
           title: language === 'en' ? "Login Failed" : "लॉगिन फेल",

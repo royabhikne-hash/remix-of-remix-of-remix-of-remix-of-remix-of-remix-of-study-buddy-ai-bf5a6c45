@@ -7,9 +7,9 @@ const corsHeaders = {
 
 // Plan limits configuration
 const PLAN_LIMITS: Record<string, { chatsPerDay: number; imagesPerDay: number; premiumTTS: boolean; monthlyPrice: number }> = {
-  starter: { chatsPerDay: 20, imagesPerDay: 3, premiumTTS: false, monthlyPrice: 50 },
-  basic: { chatsPerDay: 60, imagesPerDay: 7, premiumTTS: false, monthlyPrice: 99 },
-  pro: { chatsPerDay: 100, imagesPerDay: 15, premiumTTS: true, monthlyPrice: 199 },
+  starter: { chatsPerDay: 15, imagesPerDay: 2, premiumTTS: false, monthlyPrice: 50 },
+  basic: { chatsPerDay: 40, imagesPerDay: 6, premiumTTS: false, monthlyPrice: 99 },
+  pro: { chatsPerDay: 70, imagesPerDay: 12, premiumTTS: true, monthlyPrice: 199 },
 };
 
 type SubscriptionAction =

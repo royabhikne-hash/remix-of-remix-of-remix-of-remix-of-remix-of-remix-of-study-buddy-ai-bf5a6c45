@@ -289,12 +289,29 @@ const Signup = () => {
       insertData.coaching_center_id = selectedCoachingId;
     }
 
-    const { error: profileError } = await supabase
-      .from("students")
-      .insert(insertData);
+    // Retry profile creation up to 3 times (session may take a moment to establish)
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise(r => setTimeout(r, 1500));
+        // Re-establish session
+        await supabase.auth.getSession();
+      }
+      
+      const { error: profileError } = await supabase
+        .from("students")
+        .insert(insertData);
 
-    if (profileError) {
-      console.error("Profile creation error:", profileError);
+      if (!profileError) {
+        return; // Success
+      }
+      
+      console.error(`Profile creation attempt ${attempt + 1} error:`, profileError);
+      lastError = profileError;
+    }
+
+    if (lastError) {
+      console.error("All profile creation attempts failed:", lastError);
       throw new Error("Failed to create student profile. Please try again.");
     }
   };
