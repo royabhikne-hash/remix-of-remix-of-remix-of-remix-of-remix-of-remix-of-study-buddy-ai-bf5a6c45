@@ -726,40 +726,40 @@ const StudentProgress = () => {
               const grade = calculateGrade();
               
               if (weeklyTests.length === 0) {
-                feedback.push("Abhi tak koi weekly test nahi diya! Hafte bhar padho aur weekly test do - tab real progress dikhega!");
+                feedback.push("You haven't taken any weekly tests yet! Study throughout the week and take the weekly test - that's when real progress shows!");
               } else {
                 if (grade.grade === "A+" || grade.grade === "A") {
-                  feedback.push(`WPS Score ${latestWPS}% - Excellent! Aap top performer ho! Aise hi consistent raho!`);
+                  feedback.push(`WPS Score ${latestWPS}% - Excellent! You're a top performer! Stay consistent!`);
                 } else if (grade.grade === "B+" || grade.grade === "B") {
-                  feedback.push(`WPS Score ${latestWPS}% - Good progress! Weak subjects pe focus karo toh A grade milega!`);
+                  feedback.push(`WPS Score ${latestWPS}% - Good progress! Focus on weak subjects to reach A grade!`);
                 } else {
-                  feedback.push(`WPS Score ${latestWPS}% - Improvement needed. Roz padho, weak topics revise karo, next test better hoga!`);
+                  feedback.push(`WPS Score ${latestWPS}% - Improvement needed. Study daily, revise weak topics, and your next test will be better!`);
                 }
               }
 
               if (stats.streak >= 7) {
                 feedback.push("7+ day streak - Champion level consistency! Keep it up!");
               } else if (stats.streak >= 3) {
-                feedback.push(`${stats.streak}-day streak - Bahut accha! 7 din tak le jao toh WPS mein boost milega!`);
+                feedback.push(`${stats.streak}-day streak - Great going! Push to 7 days for a WPS boost!`);
               } else {
-                feedback.push("Daily study start karo! Consistency se WPS score improve hota hai!");
+                feedback.push("Start studying daily! Consistency improves your WPS score!");
               }
 
               if (weakSubs.length > 0) {
-                feedback.push(`'${weakSubs[0][0]}' pe extra focus karo - ye ${weakSubs[0][1]} tests mein weak raha. Study Buddy se padho aur next test mein strong banao!`);
+                feedback.push(`Focus extra on '${weakSubs[0][0]}' - it was weak in ${weakSubs[0][1]} tests. Study with Study Buddy and ace the next test!`);
               }
 
               if (strongSubs.length > 0) {
-                feedback.push(`'${strongSubs[0][0]}' mein aap excellent ho! Is confidence ko use karke related topics bhi master karo!`);
+                feedback.push(`You're excellent in '${strongSubs[0][0]}'! Use this confidence to master related topics too!`);
               }
 
               if (weeklyTests.length >= 2) {
                 const lastWPS = calculateWPS(weeklyTests.length - 1);
                 const prevWPS = calculateWPS(weeklyTests.length - 2);
                 if (lastWPS > prevWPS) {
-                  feedback.push(`📈 WPS ${prevWPS}% → ${lastWPS}% - Improvement dikh raha hai! Great work!`);
+                  feedback.push(`📈 WPS ${prevWPS}% → ${lastWPS}% - Improvement showing! Great work!`);
                 } else if (lastWPS < prevWPS) {
-                  feedback.push(`📉 WPS ${prevWPS}% → ${lastWPS}% - Thoda giravat aayi. More practice aur revision karo!`);
+                  feedback.push(`📉 WPS ${prevWPS}% → ${lastWPS}% - Slight decline. More practice and revision needed!`);
                 }
               }
 
