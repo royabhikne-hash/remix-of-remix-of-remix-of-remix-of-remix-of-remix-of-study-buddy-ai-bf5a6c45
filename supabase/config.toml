@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.parent-dashboard]
 verify_jwt = false
+
+[functions.parent-chat]
+verify_jwt = false
