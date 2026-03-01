@@ -557,7 +557,7 @@ serve(async (req) => {
             .maybeSingle();
 
           if (existingToken?.token) {
-            parentLink = `${supabaseUrl.replace('.supabase.co', '').includes('lakhyznbqudncuhpmvzx') ? 'https://studybuddyaiapp.lovable.app' : supabaseUrl}/parent-view?token=${existingToken.token}`;
+            parentLink = `https://studybuddyaiapp.lovable.app/parent-view?token=${existingToken.token}`;
           } else {
             // Create a new parent access token
             const { data: newToken } = await supabase

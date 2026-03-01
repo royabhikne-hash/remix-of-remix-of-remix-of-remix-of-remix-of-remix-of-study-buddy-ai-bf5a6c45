@@ -483,7 +483,7 @@ const StudentProgress = () => {
             <div className="flex-1 text-center md:text-left">
               <h2 className="text-xl font-bold mb-2">Weekly Performance Score</h2>
               <p className="text-sm text-muted-foreground mb-3">
-                WPS = (Accuracy × 50%) + (Improvement × 25%) + (Weak Topic Reduction × 15%) + (Consistency × 10%)
+                Your overall study performance based on test accuracy, improvement, and consistency.
               </p>
               <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
