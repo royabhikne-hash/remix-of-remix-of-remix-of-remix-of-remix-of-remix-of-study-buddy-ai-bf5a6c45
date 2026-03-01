@@ -152,7 +152,7 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 bg-primary text-primary-foreground rounded-full p-4 shadow-lg hover:shadow-xl transition-all hover:scale-105 animate-bounce"
+        className="fixed bottom-20 right-6 z-[9999] bg-primary text-primary-foreground rounded-full p-4 shadow-lg hover:shadow-xl transition-all hover:scale-105 animate-bounce"
         aria-label="Open Parent Chatbot"
       >
         <MessageCircle className="w-6 h-6" />
@@ -161,7 +161,7 @@ const ParentChatbot = ({ token, studentName }: ParentChatbotProps) => {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[360px] max-w-[calc(100vw-2rem)] animate-in slide-in-from-bottom-4 fade-in duration-300">
+    <div className="fixed bottom-4 right-4 z-[9999] w-[360px] max-w-[calc(100vw-2rem)] animate-in slide-in-from-bottom-4 fade-in duration-300">
       <Card className="flex flex-col h-[500px] max-h-[70vh] shadow-2xl border-primary/20 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground rounded-t-lg">
