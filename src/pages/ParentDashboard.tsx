@@ -7,6 +7,7 @@ import {
   Trophy, AlertCircle, CalendarDays, Loader2, BarChart3 
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import ParentChatbot from "@/components/ParentChatbot";
 
 interface ParentData {
   student: {
@@ -238,6 +239,9 @@ const ParentDashboard = () => {
           </p>
         </div>
       </main>
+
+      {/* Parent Chatbot */}
+      {token && <ParentChatbot token={token} studentName={student.name} />}
     </div>
   );
 };
