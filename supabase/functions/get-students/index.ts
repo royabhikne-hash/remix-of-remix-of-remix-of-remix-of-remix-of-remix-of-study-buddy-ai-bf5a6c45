@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, session_token, user_type, school_id, student_id, student_class, schoolId, sessionToken } = await req.json();
+    const { action, session_token, user_type, school_id, student_id, student_class, schoolId, sessionToken, studentId } = await req.json();
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
