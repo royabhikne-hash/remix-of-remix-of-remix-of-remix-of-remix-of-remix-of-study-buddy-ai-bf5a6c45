@@ -65,7 +65,7 @@ serve(async (req) => {
           isCorrect, 
           confidence: 100, 
           reasoning: isCorrect ? "Answer matches" : "Answer doesn't match",
-          feedback: isCorrect ? "Sahi jawab!" : "Galat jawab",
+          feedback: isCorrect ? "Correct answer!" : "Incorrect answer",
           fallback: true
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -87,7 +87,7 @@ serve(async (req) => {
           isCorrect,
           confidence: 100,
           reasoning: isCorrect ? "Answer matches the correct option" : "Answer does not match",
-          feedback: isCorrect ? "Sahi jawab! 🎉" : "Galat jawab, koi baat nahi!",
+          feedback: isCorrect ? "Correct answer! 🎉" : "Incorrect, keep trying!",
           keyConceptMatched: isCorrect,
           partialCredit: isCorrect ? 100 : 0
         }),
@@ -131,7 +131,7 @@ OUTPUT FORMAT (JSON only):
         JSON.stringify({ 
           isCorrect, 
           confidence: 80, 
-          feedback: isCorrect ? "Sahi jawab!" : "Galat jawab",
+          feedback: isCorrect ? "Correct answer!" : "Incorrect answer",
           fallback: true
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -147,7 +147,7 @@ OUTPUT FORMAT (JSON only):
         JSON.stringify({ 
           isCorrect, 
           confidence: 80, 
-          feedback: isCorrect ? "Sahi jawab!" : "Galat jawab"
+          feedback: isCorrect ? "Correct answer!" : "Incorrect answer"
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -167,7 +167,7 @@ OUTPUT FORMAT (JSON only):
       analysisResult = {
         isCorrect,
         confidence: 80,
-        feedback: isCorrect ? "Sahi jawab!" : "Koi baat nahi, next time better!",
+        feedback: isCorrect ? "Correct answer!" : "Not quite, try again next time!",
       };
     }
 

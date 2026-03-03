@@ -12,11 +12,11 @@ export interface SpeechifyVoice {
 }
 
 // Speechify system voices (shared voices available to all users)
-// Note: simba-multilingual model is used for all voices to support Hindi/Hinglish
+// Note: simba-multilingual model is used for all voices
 export const SPEECHIFY_VOICES: SpeechifyVoice[] = [
-  // Indian voices - best for Hindi/Hinglish content (prioritized first)
-  { id: 'henry', name: 'Henry 🇮🇳', language: 'Hindi/English (India)', languageCode: 'hi-IN', gender: 'male', description: 'Indian accent, Hindi/Hinglish के लिए best' },
-  { id: 'natasha', name: 'Natasha 🇮🇳', language: 'Hindi/English (India)', languageCode: 'hi-IN', gender: 'female', description: 'Indian female voice, natural Hindi pronunciation' },
+  // Indian voices (prioritized first)
+  { id: 'henry', name: 'Henry 🇮🇳', language: 'English (India)', languageCode: 'en-IN', gender: 'male', description: 'Indian accent, natural and clear' },
+  { id: 'natasha', name: 'Natasha 🇮🇳', language: 'English (India)', languageCode: 'en-IN', gender: 'female', description: 'Indian female voice, clear pronunciation' },
   // English voices
   { id: 'george', name: 'George', language: 'English (UK)', languageCode: 'en-GB', gender: 'male', description: 'British accent, professional' },
   { id: 'cliff', name: 'Cliff', language: 'English (US)', languageCode: 'en-US', gender: 'male', description: 'American accent, clear' },
@@ -48,7 +48,7 @@ const clientAudioCache = new Map<string, string>();
  * 
  * Features:
  * - Server-side audio generation (works on Android, iOS, Web)
- * - Automatic Hindi/Hinglish detection with simba-multilingual model
+ * - Server-side audio generation with multilingual model
  * - Client & server-side caching for cost optimization
  * - HTML5 audio playback with mobile-friendly controls
  */
@@ -210,10 +210,10 @@ export const useSpeechifyTTS = () => {
     const voice = SPEECHIFY_VOICES.find(v => v.id === voiceId);
     if (!voice) return;
 
-    // Use Hindi preview text to demonstrate Hindi pronunciation
-    const previewText = "नमस्ते! मैं आपका Study Buddy हूं। आज क्या पढ़ना है?";
+    // Use English preview text
+    const previewText = "Hello! I am your Study Buddy. What would you like to study today?";
 
-    await speak({ text: previewText, voiceId, language: 'hi-IN' });
+    await speak({ text: previewText, voiceId, language: 'en-IN' });
   }, [speak]);
 
   // Clear all cached audio
