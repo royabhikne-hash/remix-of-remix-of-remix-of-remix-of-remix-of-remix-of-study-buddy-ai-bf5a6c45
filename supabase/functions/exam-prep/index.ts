@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
         }
 
         // Use AI to extract key topics
-        const aiResponse = await fetch("https://api.lovable.dev/v1/chat/completions", {
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${lovableApiKey}`,
