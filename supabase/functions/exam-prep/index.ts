@@ -268,15 +268,14 @@ Instructions:
           }),
         });
 
-        const aiText = await aiResponse.text();
-        let reply: string;
-        try {
-          const aiData = JSON.parse(aiText);
-          reply = aiData.choices?.[0]?.message?.content || "I'm having trouble responding right now. Please try again.";
-        } catch {
-          console.error("AI response parse error:", aiText.substring(0, 500));
-          reply = "I'm having trouble responding right now. Please try again.";
+        if (!aiResponse.ok) {
+          const errText = await aiResponse.text();
+          console.error("AI API error:", aiResponse.status, errText.substring(0, 500));
+          throw new Error(`AI API error: ${aiResponse.status}`);
         }
+
+        const aiData = await aiResponse.json();
+        const reply = aiData.choices?.[0]?.message?.content || "I'm having trouble responding right now. Please try again.";
 
         // Save messages
         await supabase.from("exam_prep_messages").insert([
