@@ -234,25 +234,37 @@ Deno.serve(async (req) => {
         const context = materials?.map((m: any) => m.extracted_content).join("\n").substring(0, 10000) || "";
         const topics = session?.extracted_topics || [];
 
+        const topicsList = topics.length > 0
+          ? topics.map((t: any) => `- ${t.name || t}: ${t.description || ''} (difficulty: ${t.difficulty || 'medium'})`).join('\n')
+          : 'No specific topics extracted yet';
+
         const systemPrompt = `You are a smart, friendly AI exam prep tutor for ${student.full_name} (Class ${student.class}, ${student.board} board).
-The student's topic familiarity: ${session?.topic_familiarity || "new"}
-The student's mood: ${session?.mood || "neutral"}
-Exam: ${session?.exam_name || "General"}
-${session?.exam_date ? `Exam date: ${session.exam_date}` : ""}
-${session?.target_score ? `Target score: ${session.target_score}` : ""}
 
-Key topics from their materials: ${JSON.stringify(topics)}
+Student Profile:
+- Topic familiarity: ${session?.topic_familiarity || "new"}
+- Current mood: ${session?.mood || "neutral"}
+- Exam: ${session?.exam_name || "General"}
+${session?.exam_date ? `- Exam date: ${session.exam_date}` : ""}
+${session?.target_score ? `- Target score: ${session.target_score}` : ""}
 
-Material context: ${context}
+Topics from their uploaded study materials:
+${topicsList}
 
-Instructions:
+Relevant material content:
+${context}
+
+CRITICAL Instructions:
+- NEVER use markdown formatting like **, ##, *, etc. Write plain text only. Use numbered lists (1. 2. 3.) or dashes for lists.
+- When the student uploads study material, you MUST ask specific, targeted questions about the KEY CONCEPTS from those materials. For example: "I see your material covers [specific topic]. Let me test your understanding - Can you explain [specific concept from the material]?"
+- Proactively quiz the student on important topics from their materials
 - Adapt your teaching style based on the student's familiarity and mood
-- If mood is "stressed" or "low_energy", be extra encouraging and break things down
-- If mood is "ready" or "curious", challenge them more
-- Use examples, scenarios, and ask questions to test understanding
-- Be conversational and supportive
-- Always relate explanations to their study materials when possible
-- Keep responses focused and not too long`;
+- If mood is "stressed" or "low_energy", be extra encouraging and break things down simply
+- If mood is "ready" or "curious", challenge them with harder questions
+- Use real-world examples and scenarios to test understanding
+- Be conversational, supportive, and engaging
+- Always relate explanations directly to their uploaded study materials
+- Keep responses focused, clear, and not too long
+- After explaining a concept, follow up with a question to check understanding`;
 
         const messages = [
           { role: "system", content: systemPrompt },
