@@ -1110,6 +1110,15 @@ const AdminDashboard = () => {
             <Crown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Plans
           </Button>
+          <Button
+            variant={activeTab === "ai-usage" ? "default" : "outline"}
+            onClick={() => setActiveTab("ai-usage")}
+            size="sm"
+            className="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            AI Costs
+          </Button>
         </div>
 
         {/* Search & Actions */}
@@ -1595,6 +1604,10 @@ const AdminDashboard = () => {
 
         {activeTab === "subscriptions" && (
           <SubscriptionAnalytics />
+        )}
+
+        {activeTab === "ai-usage" && (
+          <AIUsageAnalytics />
         )}
       </main>
 
