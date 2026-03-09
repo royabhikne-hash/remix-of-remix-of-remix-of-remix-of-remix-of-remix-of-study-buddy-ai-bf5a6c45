@@ -557,7 +557,7 @@ const ExamPrepChat: React.FC<Props> = ({ session, studentName, onSendMessage, on
         <div className="flex items-center gap-2">
           <Input
             ref={inputRef}
-            placeholder="Ask your tutor or say 'I am ready' for exam..."
+            placeholder={hasMaterials ? "Ask your tutor or say 'I am ready' for exam..." : "Upload study materials first to start chatting..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
