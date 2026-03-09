@@ -652,13 +652,19 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
     
     if (command.type === 'finish') {
       // If there's an active subject, complete it first
-      if (currentSubject) {
-        setCompletedSubjects(prev => [...prev, currentSubject]);
+      const allSubjects = [...completedSubjects];
+      if (currentSubject && !allSubjects.includes(currentSubject)) {
+        allSubjects.push(currentSubject);
+        setCompletedSubjects(allSubjects);
         setCurrentSubjectState("");
       }
       
-      // Trigger quiz generation for all studied subjects
-      handleEndStudyClick();
+      // Generate per-subject quizzes if multiple subjects were studied
+      if (allSubjects.length > 0) {
+        handlePerSubjectQuiz(allSubjects);
+      } else {
+        handleEndStudyClick();
+      }
       return;
     }
 
@@ -730,6 +736,96 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
         setSelectedImage(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Per-subject quiz generation: generates 10 MCQs + 3 short + 1 long per subject
+  const handlePerSubjectQuiz = async (subjects: string[]) => {
+    setQuizLoading(true);
+    
+    try {
+      // Show intro message
+      const introMsg: ChatMessage = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: `Great study session! You covered ${subjects.length} subject(s): ${subjects.join(", ")}. 📝\n\nNow generating a comprehensive quiz for each subject (10 MCQs + 3 Short + 1 Long per subject). Get ready!`,
+        timestamp: new Date(),
+        isTyping: true,
+      };
+      setMessages(prev => [...prev, introMsg]);
+      setTypingMessageId(introMsg.id);
+
+      // Generate quiz for first subject (sequential to avoid rate limits)
+      const allQuestions: QuizQuestion[] = [];
+      
+      for (const subj of subjects) {
+        // Get messages relevant to this subject from subjectSessions
+        const subjSession = subjectSessions[subj];
+        const subjMessages = subjSession?.messages?.length > 0 
+          ? subjSession.messages.map(m => ({ role: m.role, content: m.content }))
+          : messages.filter(m => m.content.toLowerCase().includes(subj.toLowerCase())).map(m => ({ role: m.role, content: m.content }));
+
+        const { data, error } = await supabase.functions.invoke('generate-quiz', {
+          body: { 
+            messages: subjMessages.length > 0 ? subjMessages : messages.map(m => ({ role: m.role, content: m.content })),
+            topic: subj,
+            studentLevel: analysis.currentUnderstanding,
+            weakAreas: analysis.weakAreas,
+            strongAreas: analysis.strongAreas,
+            studentId,
+            quizMode: 'per_subject'
+          }
+        });
+
+        if (!error && data?.success && data?.quiz?.questions?.length > 0) {
+          // Add subject label to each question
+          const labeledQuestions = data.quiz.questions.map((q: QuizQuestion, idx: number) => ({
+            ...q,
+            id: allQuestions.length + idx + 1,
+            topic: subj,
+          }));
+          allQuestions.push(...labeledQuestions);
+          
+          const subjectDoneMsg: ChatMessage = {
+            id: (Date.now() + Math.random()).toString(),
+            role: "assistant",
+            content: `${subj} quiz ready! (${labeledQuestions.length} questions) ✅`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, subjectDoneMsg]);
+        } else {
+          console.error(`Quiz generation failed for ${subj}:`, error);
+        }
+      }
+
+      if (allQuestions.length > 0) {
+        setQuizQuestions(allQuestions);
+        setIsQuizMode(true);
+        setCurrentQuestionIndex(0);
+        setUserAnswers([]);
+        setAnswerResults([]);
+        setShortAnswerInput("");
+        
+        const startMsg: ChatMessage = {
+          id: (Date.now() + 2).toString(),
+          role: "assistant",
+          content: `All quizzes generated! ${allQuestions.length} total questions across ${subjects.length} subject(s). Let's begin! 🚀`,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, startMsg]);
+      } else {
+        finishStudySession();
+      }
+    } catch (err) {
+      console.error("Per-subject quiz error:", err);
+      toast({
+        title: "Quiz Error",
+        description: "Could not generate subject quizzes. Ending session.",
+        variant: "destructive"
+      });
+      finishStudySession();
+    } finally {
+      setQuizLoading(false);
     }
   };
 
