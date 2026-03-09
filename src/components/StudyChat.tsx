@@ -114,13 +114,18 @@ const StudyChat = ({ onEndStudy, studentId, studentClass = "10", studentBoard = 
   // Subject and Chapter selection state (optional - for reference only)
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedChapter, setSelectedChapter] = useState("");
-  const [showSubjectSelector, setShowSubjectSelector] = useState(false); // Hidden by default - open learning
+  const [showSubjectSelector, setShowSubjectSelector] = useState(false);
+  
+  // Subject session tracking - allows multi-subject study
+  const [currentSubject, setCurrentSubjectState] = useState<string>("");
+  const [completedSubjects, setCompletedSubjects] = useState<string[]>([]);
+  const [subjectSessions, setSubjectSessions] = useState<Record<string, { messages: ChatMessage[], startedAt: Date }>>({});
   
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       role: "assistant",
-      content: "Hey there! I'm your Study Buddy! 📚 Ask me anything about Math, Science, Hindi, English, Social Studies - whatever doubt you have, I'll help you out! So, what do you want to study today?",
+      content: "Hey there! I'm your Study Buddy! 📚\n\nTo start studying, just say:\n- \"Start Computer\" or \"Start History\" etc.\n\nWhen you finish a subject, say:\n- \"Computer done\" or \"History done\"\n\nTo end your session and take quizzes, say:\n- \"Finish study\"\n\nSo, what do you want to study today?",
       timestamp: new Date(),
     },
   ]);
