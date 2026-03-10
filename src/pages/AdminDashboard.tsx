@@ -118,7 +118,7 @@ const AdminDashboard = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"schools" | "coaching" | "students" | "reports" | "student-reports" | "rankings" | "subscriptions" | "ai-usage">("schools");
+  const [activeTab, setActiveTab] = useState<"schools" | "coaching" | "students" | "reports" | "student-reports" | "rankings" | "subscriptions" | "ai-usage" | "boards">("schools");
   const [rankings, setRankings] = useState<RankingData[]>([]);
   
   // Coaching centers state

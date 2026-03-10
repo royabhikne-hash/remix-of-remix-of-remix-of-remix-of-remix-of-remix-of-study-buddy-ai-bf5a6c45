@@ -803,8 +803,81 @@ Deno.serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Board management actions (admin only)
+    if (action === 'list_boards') {
+      const { data: boards } = await supabaseAdmin
+        .from('custom_boards')
+        .select('*')
+        .order('created_at', { ascending: true });
+      return new Response(JSON.stringify({ boards: boards || [] }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (action === 'add_board') {
+      const token = session_token || sessionToken;
+      if (!token) {
+        return new Response(JSON.stringify({ error: 'Auth required' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const session = await validateSessionToken(supabaseAdmin, token, 'admin');
+      if (!session.valid) {
+        return new Response(JSON.stringify({ error: 'Invalid admin session' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const { board_name, board_state } = await req.clone().then(r => r.json());
+      if (!board_name || board_name.trim().length < 2) {
+        return new Response(JSON.stringify({ error: 'Board name is required (min 2 chars)' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const { data, error: insertErr } = await supabaseAdmin
+        .from('custom_boards')
+        .insert({ name: board_name.trim(), state: board_state?.trim() || null })
+        .select()
+        .single();
+      if (insertErr) {
+        return new Response(JSON.stringify({ error: insertErr.message }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ board: data }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (action === 'delete_board') {
+      const token = session_token || sessionToken;
+      if (!token) {
+        return new Response(JSON.stringify({ error: 'Auth required' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const session = await validateSessionToken(supabaseAdmin, token, 'admin');
+      if (!session.valid) {
+        return new Response(JSON.stringify({ error: 'Invalid admin session' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const { board_id } = await req.clone().then(r => r.json());
+      const { error: delErr } = await supabaseAdmin
+        .from('custom_boards')
+        .delete()
+        .eq('id', board_id);
+      if (delErr) {
+        return new Response(JSON.stringify({ error: delErr.message }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     return new Response(
-      JSON.stringify({ error: 'Invalid user type' }),
+      JSON.stringify({ error: 'Invalid user type or action' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
