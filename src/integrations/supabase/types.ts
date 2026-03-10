@@ -295,6 +295,30 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_boards: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          state: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          state?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          state?: string | null
+        }
+        Relationships: []
+      }
       daily_usage: {
         Row: {
           chats_used: number
