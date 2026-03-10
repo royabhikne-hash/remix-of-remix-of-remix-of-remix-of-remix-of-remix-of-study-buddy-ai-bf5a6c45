@@ -1120,6 +1120,15 @@ const AdminDashboard = () => {
             <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             AI Costs
           </Button>
+          <Button
+            variant={activeTab === "boards" ? "default" : "outline"}
+            onClick={() => setActiveTab("boards")}
+            size="sm"
+            className="text-xs sm:text-sm whitespace-nowrap"
+          >
+            <Layers className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            Boards
+          </Button>
         </div>
 
         {/* Search & Actions */}
